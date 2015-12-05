@@ -104,6 +104,9 @@ def api_get_stations(api_key, contract = None):
 	url = "https://api.jcdecaux.com/vls/v1/stations"
 	headers = { "Accept": "application/json" }
 	r = requests.get(url, params=payload, headers=headers)
+	# avoid ultra-slow auto-detect
+	# see https://github.com/kennethreitz/requests/issues/2359
+	r.encoding = "utf-8"
 	return r.text
 
 # check api error
