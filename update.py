@@ -184,7 +184,7 @@ def work():
 	# load api key from config file
 	api_key = load_api_key()
 	# fetch data from api
-	text = api_get_stations(api_key,"Mulhouse")
+	text = api_get_stations(api_key)
 	# parse json
 	t0_json = json.loads(text)
 	# check that api returnd valid data
