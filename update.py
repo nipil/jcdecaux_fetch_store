@@ -2,11 +2,14 @@
 
 import re
 import sys
+import csv
 import json
 import codecs
 import os.path
 import requests
 import ConfigParser
+
+storage = {}
 
 # save unicode to file
 def save_unicode_file(u_string, filename):
@@ -54,7 +57,11 @@ def station_list_to_tree(stations):
 
 # store station sample
 def store_station(station, station_number, contract_name, timestamp):
-	print "saving %s number %i of contract %s at %i" % (station, station_number, contract_name, timestamp)
+	if not storage.has_key(contract_name):
+		storage[contract_name] = {}
+	stations = storage[contract_name]
+	stations[station_number] = station
+	station["update"] = timestamp
 
 # store contract stations
 def store_stations(stations, contract_name):
@@ -121,7 +128,7 @@ if t2_text is not None:
 
 # t0 = current, t1 = previous, t2 = oldest
 
-# browse t0 
+# browse t0 and deduplicates as needed
 for t0_contract_name in t0_tree:
 	# extract t0 contract stations
 	t0_stations = t0_tree[t0_contract_name]
@@ -182,6 +189,9 @@ for t0_contract_name in t0_tree:
 			# no change, store latest unchanged (t1)
 			store_station(t1_station, t0_station_number, t0_contract_name, t1_update)
 			continue
+
+# output stored data
+print json.dumps(storage)
 
 # age cache files
 age_file("~/.jcd.cache.t1","~/.jcd.cache.t2")
