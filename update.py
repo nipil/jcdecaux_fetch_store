@@ -4,12 +4,33 @@ import re
 import sys
 import csv
 import json
+import errno
 import codecs
 import os.path
 import requests
 import ConfigParser
 
 storage = {}
+
+# create folder
+def create_folder(path):
+	try:
+		full_path = os.path.expanduser(path)
+		os.makedirs(full_path)
+	except OSError as exception:
+		if exception.errno != errno.EEXIST:
+			print "could not create folder %s" % full_path
+			raise exception
+
+# create working folders
+def make_sure_program_folders_exist():
+	try:
+		create_folder("~/.jcd/")
+		create_folder("~/.jcd/cache/")
+		create_folder("~/.jcd/updates/")
+		create_folder("~/.jcd/archives/")
+	except OSError:
+		sys.exit(1)
 
 # save unicode to file
 def save_unicode_file(u_string, filename):
@@ -83,7 +104,7 @@ def load_api_key():
 	defaults = { "ApiKey": "" }
 	config = ConfigParser.SafeConfigParser(defaults)
 	# load
-	config_file = os.path.expanduser("~/.jcd.ini")
+	config_file = os.path.expanduser("~/.jcd/config.ini")
 	config.read(config_file)
 	api_key = config.get("DEFAULT","ApiKey")
 	# save default
@@ -94,7 +115,6 @@ def load_api_key():
 		print "%s: ApiKey has invalid format" % config_file
 		sys.exit(1)
 	return api_key
-
 
 # api
 def api_get_stations(api_key, contract = None):
@@ -184,6 +204,8 @@ def deduplicate_store(t0_tree, t1_tree, t2_tree):
 # t0 = current, t1 = previous, t2 = oldest
 #########################################
 def work():
+	# create program folders
+	make_sure_program_folders_exist()
 	# load api key from config file
 	api_key = load_api_key()
 	# fetch data from api
@@ -193,10 +215,10 @@ def work():
 	# check that api returnd valid data
 	check_api_error(t0_json)
 	# save t0 data to disk
-	save_unicode_file(text,"~/.jcd.cache.t0")
+	save_unicode_file(text,"~/.jcd/cache/t0")
 	# load cache
-	t1_text = load_unicode_file("~/.jcd.cache.t1")
-	t2_text = load_unicode_file("~/.jcd.cache.t2")
+	t1_text = load_unicode_file("~/.jcd/cache/t1")
+	t2_text = load_unicode_file("~/.jcd/cache/t2")
 	# build trees
 	t0_tree = station_list_to_tree(t0_json)
 	t1_json = None
@@ -214,8 +236,8 @@ def work():
 	# output stored data
 	print json.dumps(storage)
 	# age cache files
-	age_file("~/.jcd.cache.t1","~/.jcd.cache.t2")
-	age_file("~/.jcd.cache.t0","~/.jcd.cache.t1")
+	age_file("~/.jcd/cache/t1","~/.jcd/cache/t2")
+	age_file("~/.jcd/cache/t0","~/.jcd/cache/t1")
 
 # main
 work()
