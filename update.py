@@ -2,8 +2,8 @@
 
 import re
 import sys
-import csv
 import json
+import time
 import errno
 import codecs
 import os.path
@@ -29,6 +29,7 @@ def make_sure_program_folders_exist():
 		create_folder("~/.jcd/cache/")
 		create_folder("~/.jcd/updates/")
 		create_folder("~/.jcd/archives/")
+		create_folder("~/.jcd/databases/")
 	except OSError:
 		sys.exit(1)
 
@@ -107,7 +108,7 @@ def load_api_key():
 	config_file = os.path.expanduser("~/.jcd/config.ini")
 	config.read(config_file)
 	api_key = config.get("DEFAULT","ApiKey")
-	# save default
+	# save default and reformat existing
 	with open(config_file, "wt") as f:
 		config.write(f)
 	# check
@@ -234,7 +235,9 @@ def work():
 	# deduplicate and store
 	deduplicate_store(t0_tree,t1_tree,t2_tree)
 	# output stored data
-	print json.dumps(storage)
+	output_text = json.dumps(storage)
+	time_stamp = time.time()
+	save_unicode_file(output_text,"~/.jcd/updates/%i.json" % time_stamp)
 	# age cache files
 	age_file("~/.jcd/cache/t1","~/.jcd/cache/t2")
 	age_file("~/.jcd/cache/t0","~/.jcd/cache/t1")
