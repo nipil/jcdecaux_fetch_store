@@ -8,6 +8,7 @@ import time
 import errno
 import codecs
 import os.path
+import logging
 import requests
 import ConfigParser
 
@@ -150,6 +151,8 @@ def check_and_fix_input_for_bugs(json):
 		# api sometime provides 'null', so we consider the update was "now" instead
 		if station["last_update"] is None:
 			station["last_update"] = int(time.time())
+			logging.warning("Station %s_%s had null 'last_update', overrided using time.time()=%s",
+				station["contract_name"], station["number"],station["last_update"])
 
 # deduplicate using t0, t1 and t2
 def deduplicate_store(t0_tree, t1_tree, t2_tree):
@@ -264,5 +267,12 @@ def work():
 	move_file("~/.jcd/cache/t1","~/.jcd/cache/t2")
 	move_file("~/.jcd/cache/t0","~/.jcd/cache/t1")
 
+
 # main
-work()
+def main():
+	# setup logging
+	logging.basicConfig(format="%(levelname)s:%(asctime)s %(message)s")
+	# do work
+	work()
+
+main()
