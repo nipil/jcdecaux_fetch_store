@@ -238,6 +238,9 @@ def work():
 		t2_tree = station_list_to_tree(t2_json)
 	# deduplicate and store
 	deduplicate_store(t0_tree,t1_tree,t2_tree)
+	# don't output if empty set
+	if not storage:
+		return
 	# output stored data
 	output_text = json.dumps(storage)
 	time_stamp = time.time()
