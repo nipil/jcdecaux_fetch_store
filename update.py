@@ -83,11 +83,7 @@ def station_list_to_tree(stations):
 			s["status"] = 1
 		else:
 			s["status"] = 0
-		# api sometime provides 'null', so we consider the update was "now" instead
-		if l["last_update"] is None:
-			s["update"] = int(time.time())
-		else:
-			s["update"] = int(l["last_update"] / 1000)
+		s["update"] = int(l["last_update"] / 1000)
 	return r
 
 # store station sample
@@ -123,7 +119,7 @@ def load_api_key():
 	api_key = config.get("DEFAULT","ApiKey")
 	# flush config to file to create or reformat it
 	save_config_file(config_file, config)
-	# check
+	# check api key for integrity
 	if not re.match("^[0-9a-z]{40}$", api_key):
 		print "%s: ApiKey has invalid format" % config_file
 		sys.exit(1)
@@ -147,6 +143,13 @@ def check_api_error(json):
 	if type(json) is dict and t0_json.has_key("error"):
 		print "API: %s" % t0_json["error"]
 		sys.exit(1)
+
+# check input stream
+def check_and_fix_input_for_bugs(json):
+	for station in json:
+		# api sometime provides 'null', so we consider the update was "now" instead
+		if station["last_update"] is None:
+			station["last_update"] = int(time.time())
 
 # deduplicate using t0, t1 and t2
 def deduplicate_store(t0_tree, t1_tree, t2_tree):
@@ -227,6 +230,10 @@ def work():
 	t0_json = json.loads(text)
 	# check that api returnd valid data
 	check_api_error(t0_json)
+	# check input for bugs
+	check_and_fix_input_for_bugs(t0_json)
+	# re-convert so fixes are flushed to cache
+	text = json.dumps(t0_json)
 	# save t0 data to disk
 	save_unicode_file(text,"~/.jcd/cache/t0")
 	# load cache
