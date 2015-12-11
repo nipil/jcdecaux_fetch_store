@@ -53,8 +53,8 @@ def load_unicode_file(filename):
 		pass
 	return None
 
-# age file
-def age_file(new_file, old_file):
+# move file
+def move_file(new_file, old_file):
 	nf = os.path.expanduser(new_file)
 	of = os.path.expanduser(old_file)
 	try:
@@ -239,8 +239,8 @@ def work():
 	time_stamp = time.time()
 	save_unicode_file(output_text,"~/.jcd/updates/%i.json" % time_stamp)
 	# age cache files
-	age_file("~/.jcd/cache/t1","~/.jcd/cache/t2")
-	age_file("~/.jcd/cache/t0","~/.jcd/cache/t1")
+	move_file("~/.jcd/cache/t1","~/.jcd/cache/t2")
+	move_file("~/.jcd/cache/t0","~/.jcd/cache/t1")
 
 # main
 work()
