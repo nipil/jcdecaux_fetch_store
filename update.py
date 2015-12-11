@@ -3,6 +3,7 @@
 import re
 import sys
 import json
+import stat
 import time
 import errno
 import codecs
@@ -104,6 +105,14 @@ def store_stations(stations, contract_name):
 		timestamp = station.pop("update",None)
 		store_station(station, number, contract_name, timestamp)
 
+# save config file
+def save_config_file(filename, configuration):
+	# save default and reformat existing
+	with open(filename, "wt") as f:
+		configuration.write(f)
+	# restrict access to protect api key
+	os.chmod(filename, stat.S_IRUSR | stat.S_IWUSR)
+
 # config
 def load_api_key():
 	defaults = { "ApiKey": "" }
@@ -112,9 +121,8 @@ def load_api_key():
 	config_file = os.path.expanduser("~/.jcd/config.ini")
 	config.read(config_file)
 	api_key = config.get("DEFAULT","ApiKey")
-	# save default and reformat existing
-	with open(config_file, "wt") as f:
-		config.write(f)
+	# flush config to file to create or reformat it
+	save_config_file(config_file, config)
 	# check
 	if not re.match("^[0-9a-z]{40}$", api_key):
 		print "%s: ApiKey has invalid format" % config_file
