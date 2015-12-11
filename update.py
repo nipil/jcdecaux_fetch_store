@@ -82,7 +82,11 @@ def station_list_to_tree(stations):
 			s["status"] = 1
 		else:
 			s["status"] = 0
-		s["update"] = int(l["last_update"] / 1000)
+		# api sometime provides 'null', so we consider the update was "now" instead
+		if l["last_update"] is None:
+			s["update"] = int(time.time())
+		else:
+			s["update"] = int(l["last_update"] / 1000)
 	return r
 
 # store station sample
