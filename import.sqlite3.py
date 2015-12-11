@@ -79,7 +79,7 @@ def import_contract_station(contract_name, station_number, station):
 			import_station_dynamic_data(connection, station)
 	except (sqlite3.OperationalError,sqlite3.IntegrityError,sqlite3.Error) as e:
 		logging.error(e)
-		raise JcdImportException("Failed to import station %s" % station)
+		raise JcdImportException("Failed to import station %s into %s %s" % (station,contract_name,station_number))
 
 # import update file into databases
 def import_update(filename):
