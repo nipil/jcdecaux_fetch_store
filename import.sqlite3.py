@@ -5,6 +5,7 @@ import json
 import glob
 import time
 import codecs
+import shutil
 import sqlite3
 import os.path
 import logging
@@ -14,6 +15,11 @@ storage = {}
 class JcdImportException(Exception):
 	def __init__(self,*args,**kwargs):
 		Exception.__init__(self,*args,**kwargs)
+
+def move_file(src,dst):
+	sn = os.path.expanduser(src)
+	dn = os.path.expanduser(dst)
+	shutil.move(sn,dn)
 
 # load unicode to file
 def load_unicode_file(filename):
@@ -109,7 +115,11 @@ def import_update(filename):
 		# due to context, commit on success, auto-rollback on except
 		with connection:
 			n = import_updates(connection, json, timestamp)
+			move_file(filename,"~/.jcd/archives/")
 		connection.close()
+	except IOError as e:
+		logging.error(e)
+		raise JcdImportException("Failed to archive %s" % filename)
 	except (sqlite3.OperationalError,sqlite3.IntegrityError,sqlite3.Error) as e:
 		logging.error(e)
 		raise JcdImportException("Failed to import %s" % filename)
