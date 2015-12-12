@@ -4,6 +4,8 @@ import sys
 import json
 import glob
 import time
+import stat
+import errno
 import codecs
 import shutil
 import sqlite3
@@ -16,6 +18,28 @@ class JcdImportException(Exception):
 	def __init__(self,*args,**kwargs):
 		Exception.__init__(self,*args,**kwargs)
 
+# uses os.path, errno, sys, stat
+class FileLock:
+	def __init__(self, file_path):
+		self.file_path = os.path.expanduser(file_path)
+	def acquire(self):
+		try:
+			fd = os.open(self.file_path, os.O_CREAT | os.O_EXCL, stat.S_IWUSR)
+			os.close(fd)
+			return True
+		except OSError as (error, message):
+			if error == errno.EEXIST:
+				return False
+			raise
+	def release(self):
+		try:
+			os.remove(self.file_path)
+		except OSError as (error, message):
+			if error == errno.ENOENT:
+				return
+			raise
+
+# move a file
 def move_file(src,dst):
 	sn = os.path.expanduser(src)
 	dn = os.path.expanduser(dst)
@@ -138,9 +162,18 @@ def work():
 
 # main
 def main():
+	lock = FileLock("~/.jcd/import-sqlite3.lock")
+	# make sure only one instance is running
+	if not lock.acquire():
+		sys.exit(1)
 	# setup logging
 	logging.basicConfig(format="%(levelname)s:%(asctime)s %(message)s")
 	# do work
-	work()
+	try:
+		work()
+	except:
+		raise
+	finally:
+		lock.release()
 
 main()
