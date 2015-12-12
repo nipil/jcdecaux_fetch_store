@@ -56,13 +56,13 @@ def load_unicode_file(filename):
 	return None
 
 # move file
-def move_file(new_file, old_file):
+def move_file(old_file, new_file):
 	nf = os.path.expanduser(new_file)
 	of = os.path.expanduser(old_file)
 	try:
-		os.rename(nf,of)
-	except OSError:
-		pass
+		os.rename(of,nf)
+	except OSError as e:
+		print "cannot rename %s to %s" % (of,nf)
 
 # turn station list into tree
 def station_list_to_tree(stations):
