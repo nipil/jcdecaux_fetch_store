@@ -43,7 +43,8 @@ def convert_to_json(content):
 def list_files(path, ext):
 	full_path = os.path.expanduser(path)
 	file_list = glob.glob("%s/*.%s" % (full_path, ext))
-	return sorted(file_list)
+	# failed imports are tried AFTER newest
+	return sorted(file_list, reverse=True)
 
 # open sqlite3 database
 def open_database():
