@@ -58,15 +58,19 @@ class Initialize:
                 raise JcdException("User refused to delete folder.")
         # actually delete the folder
         try:
+            print "Removing folder [%s] and its content" % self._data_path
             shutil.rmtree(self._data_path)
-            print "Removed folder [%s] and its content" % self._data_path
         except OSError as e:
+            # silently ignore "absent directory"
+            if e.errno == errno.ENOENT:
+                return
+            # on other errors
             raise JcdException("Could not remove folder : %s" % e)
 
     def _create_folder(self):
         try:
+            print "Creating folder [%s]" % self._data_path
             os.makedirs(self._data_path)
-            print "Created folder [%s]" % self._data_path
         except OSError as exception:
             # folder exists
             if exception.errno == errno.EEXIST:
