@@ -24,76 +24,118 @@
 # DEALINGS IN THE SOFTWARE.
 
 import sys
+import errno
+import readline
+import shutil
 import os.path
 import argparse
 
+# applications specific exception
 class JcdException(Exception):
-	def __init__(self,*args,**kwargs):
-		Exception.__init__(self,*args,**kwargs)
+    def __init__(self,*args,**kwargs):
+        Exception.__init__(self,*args,**kwargs)
 
+# yes/no choice
+# from http://stackoverflow.com/a/4741730
+def yn_choice(message, default='y'):
+    choices = 'Y/n' if default.lower() in ('y', 'yes') else 'y/N'
+    choice = raw_input("%s (%s) " % (message, choices))
+    values = ('y', 'yes', '') if default == 'y' else ('y', 'yes')
+    return choice.strip().lower() in values
+
+# initialize application data
 class Initialize:
-	def __init__(self, data_path, args):
-		self._data_path = data_path
-		self._args = args
+    def __init__(self, data_path, args):
+        self._data_path = data_path
+        self._args = args
 
-	def _create_folder(self):
-		pass
+    def _remove_folder(self):
+        # ask the user for confirmation
+        if not self._args.yes:
+            if not yn_choice(
+                    "Folder [%s] exists, delete it and its content ?"
+                    % self._data_path, 'n'):
+                raise JcdException("User refused to delete folder.")
+        # actually delete the folder
+        try:
+            shutil.rmtree(self._data_path)
+            print "Removed folder [%s] and its content" % self._data_path
+        except OSError as e:
+            raise JcdException("Could not remove folder : %s" % e)
 
-	def _create_log_db(self):
-		pass
+    def _create_folder(self):
+        try:
+            os.makedirs(self._data_path)
+            print "Created folder [%s]" % self._data_path
+        except OSError as exception:
+            # folder exists
+            if exception.errno == errno.EEXIST:
+                raise JcdException(
+                    "Could not create folder [%s] "
+                    "as it already exists. "
+                    "Use --force to remove it "
+                    "and its content." % self._data_path)
+            # other system error
+            raise
 
-	def _create_data_db(self):
-		pass
-
-	def run(self):
-		print self._args
-		print self._data_path
-		self._create_folder()
-		self._create_log_db()
-		self._create_data_db()
+    def run(self):
+        # remove folder if creation is forced
+        if self._args.force:
+            self._remove_folder()
+        self._create_folder()
 
 # main app
 class App:
-	Path = os.path.expanduser("~/.jcd")
+    Path = os.path.expanduser("~/.jcd")
 
-	def __init__(self, data_path):
-		# store data path
-		self._data_path = data_path
-		# main parser
-		top = argparse.ArgumentParser(
-			description = 'Fetch and store JCDecaux API results',
-		)
-		subs = top.add_subparsers()
+    def __init__(self, data_path):
+        # store data path
+        self._data_path = data_path
+        # main parser
+        top = argparse.ArgumentParser(
+            description = 'Fetch and store JCDecaux API results',
+        )
+        subs = top.add_subparsers()
 
-		# initialize command
-		init = subs.add_parser(
-			'initialize',
-			help = 'create application files',
-			description = 'Initialize application'
-		)
-		init.add_argument(
-			'--force',
-			action = 'store_true',
-			help = 'overwrite existing files'
-		)
-		init.set_defaults(func=self.initialize)
-		# parse arguments
-		self._args = top.parse_args()
-		self._action = self._args.func
-		# cleanup namespace
-		del self._args.func
+        # initialize command
+        init = subs.add_parser(
+            'initialize',
+            help = 'create application files',
+            description = 'Initialize application'
+        )
+        init.add_argument(
+            '--force', '-f',
+            action = 'store_true',
+            help = 'overwrite existing files'
+        )
+        init.add_argument(
+            '--yes', '-y',
+            action = 'store_true',
+            help = 'do not ask for confirmation before '
+                'overwritingdo not ask for confirmation '
+                'before overwriting'
+        )
+        init.set_defaults(func=self.initialize)
+        # parse arguments
+        self._args = top.parse_args()
+        self._action = self._args.func
+        # cleanup namespace
+        del self._args.func
 
-	def initialize(self):
-		init = Initialize(self._data_path, self._args)
-		init.run()
+    def initialize(self):
+        init = Initialize(self._data_path, self._args)
+        init.run()
 
-	def run(self):
-		try:
-			self._action()
-		except JcdException as e:
-			print e
+    def run(self):
+        try:
+            self._action()
+        except JcdException as e:
+            print e
 
 # main
 if __name__ == '__main__':
-	app = App(os.path.expanduser("~/.jcd"))
-	app.run()
+    app = App(os.path.expanduser("~/.jcd"))
+    try:
+        app.run()
+    except KeyboardInterrupt:
+        pass
