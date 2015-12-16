@@ -25,9 +25,9 @@
 
 import sys
 import errno
-import readline
 import shutil
 import os.path
+import sqlite3
 import argparse
 
 # applications specific exception
@@ -42,6 +42,24 @@ def yn_choice(message, default='y'):
     choice = raw_input("%s (%s) " % (message, choices))
     values = ('y', 'yes', '') if default == 'y' else ('y', 'yes')
     return choice.strip().lower() in values
+
+# manages access to the application database
+class AppDB:
+    FileName = "app.db"
+    SettingsTable = "settings"
+
+    def __init__(self, path):
+        self._db_path = os.path.normpath("%s/%s" % (path,AppDB.FileName))
+        print "Opening database [%s]" % self._db_path
+        self._connection = sqlite3.connect(self._db_path)
+
+    def createSettingsTable(self):
+        print "Creating table [%s]" % AppDB.SettingsTable
+        self._connection.execute(
+            '''CREATE TABLE %s(
+                    name TEXT PRIMARY KEY,
+                    value -- no type, use affinity
+            )''' % AppDB.SettingsTable)
 
 # initialize application data
 class Initialize:
@@ -82,19 +100,28 @@ class Initialize:
             # other system error
             raise
 
+    def _create_tables(self):
+        try:
+            db = AppDB(self._data_path)
+            db.createSettingsTable()
+        except sqlite3.Error as e:
+            raise JcdException(
+                "Database error (%s) : %s"
+                % (e.__class__.__name__, e))
+
     def run(self):
         # remove folder if creation is forced
         if self._args.force:
             self._remove_folder()
         self._create_folder()
+        # create tables in data db
+        self._create_tables()
 
 # main app
 class App:
-    Path = os.path.expanduser("~/.jcd")
-
     def __init__(self, data_path):
         # store data path
-        self._data_path = data_path
+        self._data_path = os.path.expanduser(data_path)
         # main parser
         top = argparse.ArgumentParser(
             description = 'Fetch and store JCDecaux API results',
@@ -138,7 +165,7 @@ class App:
 
 # main
 if __name__ == '__main__':
-    app = App(os.path.expanduser("~/.jcd"))
+    app = App("~/.jcd")
     try:
         app.run()
     except KeyboardInterrupt:
