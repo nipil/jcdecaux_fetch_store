@@ -47,6 +47,7 @@ def yn_choice(message, default='y'):
 class AppDB:
     FileName = "app.db"
     SettingsTable = "settings"
+    ApiCacheTable = "api_cache"
 
     def __init__(self, path):
         self._db_path = os.path.normpath("%s/%s" % (path,AppDB.FileName))
@@ -60,6 +61,16 @@ class AppDB:
                     name TEXT PRIMARY KEY,
                     value -- no type, use affinity
             )''' % AppDB.SettingsTable)
+
+    def createApiCacheTable(self):
+        print "Creating table [%s]" % AppDB.ApiCacheTable
+        self._connection.execute(
+            '''CREATE TABLE %s(
+                    url TEXT,
+                    timestamp INTEGER,
+                    json TEXT NOT NULL,
+                    PRIMARY KEY(url,timestamp)
+            )''' % AppDB.ApiCacheTable)
 
 # initialize application data
 class Initialize:
@@ -104,6 +115,7 @@ class Initialize:
         try:
             db = AppDB(self._data_path)
             db.createSettingsTable()
+            db.createApiCacheTable()
         except sqlite3.Error as e:
             raise JcdException(
                 "Database error (%s) : %s"
