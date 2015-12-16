@@ -24,11 +24,41 @@
 # DEALINGS IN THE SOFTWARE.
 
 import sys
+import os.path
 import argparse
+
+class JcdException(Exception):
+	def __init__(self,*args,**kwargs):
+		Exception.__init__(self,*args,**kwargs)
+
+class Initialize:
+	def __init__(self, data_path, args):
+		self._data_path = data_path
+		self._args = args
+
+	def _create_folder(self):
+		pass
+
+	def _create_log_db(self):
+		pass
+
+	def _create_data_db(self):
+		pass
+
+	def run(self):
+		print self._args
+		print self._data_path
+		self._create_folder()
+		self._create_log_db()
+		self._create_data_db()
 
 # main app
 class App:
-	def __init__(self):
+	Path = os.path.expanduser("~/.jcd")
+
+	def __init__(self, data_path):
+		# store data path
+		self._data_path = data_path
 		# main parser
 		top = argparse.ArgumentParser(
 			description = 'Fetch and store JCDecaux API results',
@@ -48,13 +78,22 @@ class App:
 		)
 		init.set_defaults(func=self.initialize)
 		# parse arguments
-		args = top.parse_args()
-		# run specified command
-		args.func(args)
+		self._args = top.parse_args()
+		self._action = self._args.func
+		# cleanup namespace
+		del self._args.func
 
-	def initialize(self, args):
-		print args
+	def initialize(self):
+		init = Initialize(self._data_path, self._args)
+		init.run()
+
+	def run(self):
+		try:
+			self._action()
+		except JcdException as e:
+			print e
 
 # main
 if __name__ == '__main__':
-	app = App()
+	app = App(os.path.expanduser("~/.jcd"))
+	app.run()
