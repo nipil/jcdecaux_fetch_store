@@ -32,6 +32,7 @@ import argparse
 
 # applications specific exception
 class JcdException(Exception):
+
     def __init__(self,*args,**kwargs):
         Exception.__init__(self,*args,**kwargs)
 
@@ -45,6 +46,7 @@ def yn_choice(message, default='y'):
 
 # manages access to the application database
 class AppDB:
+
     FileName = "app.db"
     SettingsTable = "settings"
     ApiCacheTable = "api_cache"
@@ -138,9 +140,11 @@ class ConfigCmd:
         self._args = args
 
     def displayParam(self,param):
+        # TODO: read parameter from database
         print "display param [%s]" % param
 
     def setParam(self,param,value):
+        # TODO: set parameter to db
         print "set param [%s]=%s" % (param,value)
 
     def run(self):
@@ -149,6 +153,27 @@ class ConfigCmd:
                 self.displayParam(param)
             else:
                 self.setParam(param,value)
+
+# administration
+class AdminCmd:
+
+    def __init__(self, data_path, args):
+        self._data_path = data_path
+        self._args = args
+
+    def vacuum(self):
+        # TODO: vacuum db
+        print "vacuum"
+
+    def run(self):
+        for param, value in self._args.__dict__.iteritems():
+            f = getattr(self, param)
+            if not value:
+                continue
+            if type(value) == bool:
+                f()
+            else:
+                f(value)
 
 # main app
 class App:
@@ -189,6 +214,17 @@ class App:
             type = str,
             help = 'JCDecaux API key',
         )
+        # admin command
+        admin = top_command.add_parser(
+            'admin',
+            help = 'administrate application database',
+            description = 'Manage database'
+        )
+        admin.add_argument(
+            '--vacuum',
+            action = 'store_true',
+            help = 'defragment and trim sqlite database',
+        )
 
     def run(self):
         try:
@@ -209,6 +245,10 @@ class App:
     def config(self, args):
         config = ConfigCmd(self._data_path, args)
         config.run()
+
+    def admin(self, args):
+        admin = AdminCmd(self._data_path, args)
+        admin.run()
 
 # main
 if __name__ == '__main__':
