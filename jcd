@@ -198,11 +198,19 @@ class AdminCmd:
 # main app
 class App:
 
-    def __init__(self, data_path):
+    DataPath = None
+
+    def __init__(self, default_data_path):
         # store data path
-        App.DataPath = os.path.expanduser(data_path)
+        self._default_data_path = default_data_path
         # top parser
         self._parser = argparse.ArgumentParser(description = 'Fetch and store JCDecaux API results')
+        # top level argument for data destination
+        self._parser.add_argument(
+            '--datadir',
+            help = 'choose data folder (default: %s)' % default_data_path,
+            default = default_data_path
+        )
         # top level commands
         top_command = self._parser.add_subparsers(dest='command')
         # init command
@@ -243,6 +251,9 @@ class App:
         try:
             # parse arguments
             args = self._parser.parse_args()
+            # consume data-path argument
+            App.DataPath = os.path.expanduser(args.datadir)
+            del args.datadir
             # consume command
             command = getattr(self, args.command)
             del args.command
