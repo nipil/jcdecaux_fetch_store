@@ -73,7 +73,7 @@ class AppDB:
             )''' % AppDB.ApiCacheTable)
 
 # initialize application data
-class Initialize:
+class InitCmd:
     def __init__(self, data_path, args):
         self._data_path = data_path
         self._args = args
@@ -142,7 +142,7 @@ class App:
 
         # initialize command
         init = subs.add_parser(
-            'initialize',
+            'init',
             help = 'create application files',
             description = 'Initialize application'
         )
@@ -166,7 +166,7 @@ class App:
         del self._args.func
 
     def initialize(self):
-        init = Initialize(self._data_path, self._args)
+        init = InitCmd(self._data_path, self._args)
         init.run()
 
     def run(self):
