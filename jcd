@@ -79,7 +79,7 @@ class InitCmd:
         self._data_path = data_path
         self._args = args
 
-    def _remove_folder(self):
+    def _removeFolder(self):
         # ask the user for confirmation
         if not self._args.yes:
             if not yn_choice(
@@ -97,7 +97,7 @@ class InitCmd:
             # on other errors
             raise JcdException("Could not remove folder : %s" % e)
 
-    def _create_folder(self):
+    def _createFolder(self):
         try:
             print "Creating folder [%s]" % self._data_path
             os.makedirs(self._data_path)
@@ -112,7 +112,7 @@ class InitCmd:
             # other system error
             raise
 
-    def _create_tables(self):
+    def _createTables(self):
         try:
             db = AppDB(self._data_path)
             db.createSettingsTable()
@@ -125,10 +125,10 @@ class InitCmd:
     def run(self):
         # remove folder if creation is forced
         if self._args.force:
-            self._remove_folder()
-        self._create_folder()
+            self._removeFolder()
+        self._createFolder()
         # create tables in data db
-        self._create_tables()
+        self._createTables()
 
 # configure settings:
 class ConfigCmd:
