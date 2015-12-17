@@ -137,8 +137,18 @@ class ConfigCmd:
         self._data_path = data_path
         self._args = args
 
+    def displayParam(self,param):
+        print "display param [%s]" % param
+
+    def setParam(self,param,value):
+        print "set param [%s]=%s" % (param,value)
+
     def run(self):
-        print self._args
+        for param, value in self._args.__dict__.iteritems():
+            if param is None:
+                self.displayParam(param)
+            else:
+                self.setParam(param,value)
 
 # main app
 class App:
