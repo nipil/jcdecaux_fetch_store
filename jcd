@@ -36,14 +36,6 @@ class JcdException(Exception):
     def __init__(self,*args,**kwargs):
         Exception.__init__(self,*args,**kwargs)
 
-# yes/no choice
-# from http://stackoverflow.com/a/4741730
-def yn_choice(message, default='y'):
-    choices = 'Y/n' if default.lower() in ('y', 'yes') else 'y/N'
-    choice = raw_input("%s (%s) " % (message, choices))
-    values = ('y', 'yes', '') if default == 'y' else ('y', 'yes')
-    return choice.strip().lower() in values
-
 # manages access to the application database
 class AppDB:
 
@@ -123,13 +115,7 @@ class InitCmd:
         self._args = args
 
     def _removeFolder(self):
-        # ask the user for confirmation
-        if not self._args.yes:
-            if not yn_choice(
-                    "Folder [%s] exists, delete it and its content ?"
-                    % App.DataPath, 'n'):
-                raise JcdException("User refused to delete folder.")
-        # actually delete the folder
+        # delete the folder
         try:
             print "Removing folder [%s] and its content" % App.DataPath
             shutil.rmtree(App.DataPath)
@@ -148,10 +134,8 @@ class InitCmd:
             # folder exists
             if exception.errno == errno.EEXIST:
                 raise JcdException(
-                    "Could not create folder [%s] "
-                    "as it already exists. "
-                    "Use --force to remove it "
-                    "and its content." % App.DataPath)
+                    "Folder [%s] already exists. Use --force "
+                    "to destroy everything anyway." % App.DataPath)
             # other system error
             raise
 
@@ -231,13 +215,6 @@ class App:
             '--force', '-f',
             action = 'store_true',
             help = 'overwrite existing files'
-        )
-        init.add_argument(
-            '--yes', '-y',
-            action = 'store_true',
-            help = 'do not ask for confirmation before '
-                'overwritingdo not ask for confirmation '
-                'before overwriting'
         )
         # config command
         config = top_command.add_parser(
