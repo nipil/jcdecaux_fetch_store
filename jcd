@@ -74,6 +74,33 @@ class AppDB:
 
 # initialize application data
 class InitCmd:
+
+    @staticmethod
+    def _Run(path,args):
+        init = InitCmd(path, args)
+        init.run()
+
+    @staticmethod
+    def AddSubParser(subs):
+        cmd = subs.add_parser(
+            'init',
+            help = 'create application files',
+            description = 'Initialize application'
+        )
+        cmd.add_argument(
+            '--force', '-f',
+            action = 'store_true',
+            help = 'overwrite existing files'
+        )
+        cmd.add_argument(
+            '--yes', '-y',
+            action = 'store_true',
+            help = 'do not ask for confirmation before '
+                'overwritingdo not ask for confirmation '
+                'before overwriting'
+        )
+        cmd.set_defaults(func=InitCmd._Run)
+
     def __init__(self, data_path, args):
         self._data_path = data_path
         self._args = args
@@ -140,38 +167,18 @@ class App:
         )
         subs = top.add_subparsers()
 
-        # initialize command
-        init = subs.add_parser(
-            'init',
-            help = 'create application files',
-            description = 'Initialize application'
-        )
-        init.add_argument(
-            '--force', '-f',
-            action = 'store_true',
-            help = 'overwrite existing files'
-        )
-        init.add_argument(
-            '--yes', '-y',
-            action = 'store_true',
-            help = 'do not ask for confirmation before '
-                'overwritingdo not ask for confirmation '
-                'before overwriting'
-        )
-        init.set_defaults(func=self.initialize)
+        # sub commands
+        InitCmd.AddSubParser(subs)
+
         # parse arguments
         self._args = top.parse_args()
         self._action = self._args.func
         # cleanup namespace
         del self._args.func
 
-    def initialize(self):
-        init = InitCmd(self._data_path, self._args)
-        init.run()
-
     def run(self):
         try:
-            self._action()
+            self._action(self._data_path, self._args)
         except JcdException as e:
             print e
 
