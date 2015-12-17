@@ -48,37 +48,78 @@ def yn_choice(message, default='y'):
 class AppDB:
 
     FileName = "app.db"
-    SettingsTable = "settings"
-    ApiCacheTable = "api_cache"
 
-    def __init__(self, path):
-        self._db_path = os.path.normpath("%s/%s" % (path,AppDB.FileName))
-        print "Opening database [%s]" % self._db_path
-        self._connection = sqlite3.connect(self._db_path)
+    def __init__(self):
+        self._db_path = os.path.normpath("%s/%s" % (App.DataPath,self.FileName))
+        self.connection = None
 
-    def createSettingsTable(self):
-        print "Creating table [%s]" % AppDB.SettingsTable
-        self._connection.execute(
-            '''CREATE TABLE %s(
+    def open(self):
+        if self.connection is None:
+            self.connection = sqlite3.connect(self._db_path)
+
+    def close(self):
+        if self.connection is not None:
+            self.connection.close()
+        self.connection = None
+
+    def __enter__(self):
+        # open the connection if it's not already open
+        self.open()
+        # return self in case a 'as' statement is present
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        # close the connection if it's open
+        self.close()
+        # don't suppress the eventual exception
+        return False
+
+# settings table
+class SettingsDAO:
+
+    TableName = "settings"
+
+    def __init__(self, database):
+        self._database = database
+
+    def createTable(self):
+        print "Creating table [%s]" % self.TableName
+        try:
+            self._database.connection.execute(
+                '''CREATE TABLE %s(
                     name TEXT PRIMARY KEY,
                     value -- no type, use affinity
-            )''' % AppDB.SettingsTable)
+                )''' % self.TableName)
+        except sqlite3.Error as e:
+            print "%s: %s" % (type(e).__name__, e)
+            raise JcdException("Database error while creating table [%s]" % self.TableName)
 
-    def createApiCacheTable(self):
-        print "Creating table [%s]" % AppDB.ApiCacheTable
-        self._connection.execute(
-            '''CREATE TABLE %s(
-                    url TEXT,
-                    timestamp INTEGER,
-                    json TEXT NOT NULL,
-                    PRIMARY KEY(url,timestamp)
-            )''' % AppDB.ApiCacheTable)
+# settings table
+class ApiCacheDAO:
+
+    TableName = "api_cache"
+
+    def __init__(self, database):
+        self._database = database
+
+    def createTable(self):
+        print "Creating table [%s]" % self.TableName
+        try:
+            self._database.connection.execute(
+                '''CREATE TABLE %s(
+                url TEXT,
+                timestamp INTEGER,
+                json TEXT NOT NULL,
+                PRIMARY KEY(url,timestamp)
+                )''' % self.TableName)
+        except Sqlite3.Error as e:
+            print "%s: %s" % (type(e).__name__, e)
+            raise JcdException("Database error while creating table [%s]" % self.TableName)
 
 # initialize application data
 class InitCmd:
 
-    def __init__(self, data_path, args):
-        self._data_path = data_path
+    def __init__(self, args):
         self._args = args
 
     def _removeFolder(self):
@@ -86,12 +127,12 @@ class InitCmd:
         if not self._args.yes:
             if not yn_choice(
                     "Folder [%s] exists, delete it and its content ?"
-                    % self._data_path, 'n'):
+                    % App.DataPath, 'n'):
                 raise JcdException("User refused to delete folder.")
         # actually delete the folder
         try:
-            print "Removing folder [%s] and its content" % self._data_path
-            shutil.rmtree(self._data_path)
+            print "Removing folder [%s] and its content" % App.DataPath
+            shutil.rmtree(App.DataPath)
         except OSError as e:
             # silently ignore "absent directory"
             if e.errno == errno.ENOENT:
@@ -101,8 +142,8 @@ class InitCmd:
 
     def _createFolder(self):
         try:
-            print "Creating folder [%s]" % self._data_path
-            os.makedirs(self._data_path)
+            print "Creating folder [%s]" % App.DataPath
+            os.makedirs(App.DataPath)
         except OSError as exception:
             # folder exists
             if exception.errno == errno.EEXIST:
@@ -110,19 +151,16 @@ class InitCmd:
                     "Could not create folder [%s] "
                     "as it already exists. "
                     "Use --force to remove it "
-                    "and its content." % self._data_path)
+                    "and its content." % App.DataPath)
             # other system error
             raise
 
     def _createTables(self):
-        try:
-            db = AppDB(self._data_path)
-            db.createSettingsTable()
-            db.createApiCacheTable()
-        except sqlite3.Error as e:
-            raise JcdException(
-                "Database error (%s) : %s"
-                % (e.__class__.__name__, e))
+        with AppDB() as db:
+            settings = SettingsDAO(db)
+            settings.createTable()
+            apiCache = ApiCacheDAO(db)
+            apiCache.createTable()
 
     def run(self):
         # remove folder if creation is forced
@@ -135,8 +173,7 @@ class InitCmd:
 # configure settings:
 class ConfigCmd:
 
-    def __init__(self, data_path, args):
-        self._data_path = data_path
+    def __init__(self, args):
         self._args = args
 
     def displayParam(self,param):
@@ -157,8 +194,7 @@ class ConfigCmd:
 # administration
 class AdminCmd:
 
-    def __init__(self, data_path, args):
-        self._data_path = data_path
+    def __init__(self, args):
         self._args = args
 
     def vacuum(self):
@@ -180,7 +216,7 @@ class App:
 
     def __init__(self, data_path):
         # store data path
-        self._data_path = os.path.expanduser(data_path)
+        App.DataPath = os.path.expanduser(data_path)
         # top parser
         self._parser = argparse.ArgumentParser(description = 'Fetch and store JCDecaux API results')
         # top level commands
@@ -239,15 +275,15 @@ class App:
             print e
 
     def init(self, args):
-        init = InitCmd(self._data_path, args)
+        init = InitCmd(args)
         init.run()
 
     def config(self, args):
-        config = ConfigCmd(self._data_path, args)
+        config = ConfigCmd(args)
         config.run()
 
     def admin(self, args):
-        admin = AdminCmd(self._data_path, args)
+        admin = AdminCmd(args)
         admin.run()
 
 # main
