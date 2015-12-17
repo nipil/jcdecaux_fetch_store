@@ -170,7 +170,7 @@ class ConfigCmd:
 
     def run(self):
         for param, value in self._args.__dict__.iteritems():
-            if param is None:
+            if value is None:
                 self.displayParam(param)
             else:
                 self.setParam(param,value)
