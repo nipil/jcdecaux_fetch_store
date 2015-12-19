@@ -157,6 +157,10 @@ class InitCmd:
 # configure settings:
 class ConfigCmd:
 
+    Parameters = (
+        ('apikey', str, 'JCDecaux API key'),
+    )
+
     def __init__(self, args):
         self._args = args
 
@@ -230,11 +234,12 @@ class App:
             help = 'config application parameters',
             description = 'Configure application'
         )
-        config.add_argument(
-            '--apikey',
-            type = str,
-            help = 'JCDecaux API key',
-        )
+        for value in ConfigCmd.Parameters:
+            config.add_argument(
+                '--%s' % value[0],
+                type = value[1],
+                help = value[2],
+            )
         # admin command
         admin = top_command.add_parser(
             'admin',
