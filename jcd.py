@@ -80,11 +80,36 @@ class SettingsDAO:
             self._database.connection.execute(
                 '''CREATE TABLE %s(
                     name TEXT PRIMARY KEY,
-                    value -- no type, use affinity
+                    value, -- no type, use affinity
+                    last_modification INTEGER
                 )''' % self.TableName)
         except sqlite3.Error as e:
             print "%s: %s" % (type(e).__name__, e)
             raise JcdException("Database error while creating table [%s]" % self.TableName)
+
+    def setParameter(self, name, value):
+        try:
+            self._database.connection.execute(
+                '''INSERT OR REPLACE INTO
+                    %s(name,value,last_modification)
+                    VALUES(?,?, strftime('%%s', 'now'))
+                ''' % self.TableName, (name,value))
+            self._database.connection.commit()
+        except sqlite3.Error as e:
+            print "%s: %s" % (type(e).__name__, e)
+            raise JcdException("Database error while setting parameter [%s]" % name)
+
+    def getParameter(self, name):
+        try:
+            results = self._database.connection.execute(
+                '''SELECT value, datetime(last_modification,'unixepoch')
+                    FROM %s
+                    WHERE name = ?
+                ''' % self.TableName, (name,))
+            return results.fetchone()
+        except sqlite3.Error as e:
+            print "%s: %s" % (type(e).__name__, e)
+            raise JcdException("Database error while fetching parameter [%s]" % name)
 
 # settings table
 class ApiCacheDAO:
@@ -159,25 +184,36 @@ class ConfigCmd:
 
     Parameters = (
         ('apikey', str, 'JCDecaux API key'),
+        ('fetch', bool, 'Enable/disable fetch operation'),
+        ('import', bool, 'Enable/disable import operation'),
     )
 
     def __init__(self, args):
         self._args = args
 
     def displayParam(self,param):
-        # TODO: read parameter from database
-        print "display param [%s]" % param
+        with AppDB() as db:
+            settings = SettingsDAO(db)
+            (value, last_modification) = settings.getParameter(param)
+            print "%s = %s (last modified on %s)" % (param, value, last_modification)
 
-    def setParam(self,param,value):
-        # TODO: set parameter to db
-        print "set param [%s]=%s" % (param,value)
+    def updateParam(self,param,value):
+        with AppDB() as db:
+            settings = SettingsDAO(db)
+            settings.setParameter(param,value)
+            print "Setting %s = %s" % (param,value)
 
     def run(self):
+        # modify each fully provided parameter
+        has_modified = False
         for param, value in self._args.__dict__.iteritems():
-            if value is None:
-                self.displayParam(param)
-            else:
-                self.setParam(param,value)
+            if value is not None:
+                self.updateParam(param,value)
+                has_modified = True
+        # if nothing was provided, display all current parameter value
+        if not has_modified:
+            for value in self.Parameters:
+                self.displayParam(value[0])
 
 # administration
 class AdminCmd:
