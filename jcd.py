@@ -184,8 +184,8 @@ class ConfigCmd:
 
     Parameters = (
         ('apikey', str, 'JCDecaux API key'),
-        ('fetch', bool, 'Enable/disable fetch operation'),
-        ('import', bool, 'Enable/disable import operation'),
+        ('fetch', int, 'Enable/disable fetch operation'),
+        ('import', int, 'Enable/disable import operation'),
     )
 
     def __init__(self, args):
