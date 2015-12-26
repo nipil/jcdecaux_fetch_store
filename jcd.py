@@ -171,6 +171,15 @@ class InitCmd:
             apiCache = ApiCacheDAO(db)
             apiCache.createTable()
 
+    # set default parameters
+    def setDefaultParameters(self):
+        with AppDB() as db:
+            settings = SettingsDAO(db)
+            for value in ConfigCmd.Parameters:
+                if value[3] is not None:
+                    print "Setting parameter [%s] to default value [%s]" % (value[0],value[3])
+                    settings.setParameter(value[0], value[3])
+
     def run(self):
         # remove folder if creation is forced
         if self._args.force:
@@ -178,14 +187,15 @@ class InitCmd:
         self._createFolder()
         # create tables in data db
         self._createTables()
+        self.setDefaultParameters()
 
 # configure settings:
 class ConfigCmd:
 
     Parameters = (
-        ('apikey', str, 'JCDecaux API key'),
-        ('fetch', int, 'Enable/disable fetch operation'),
-        ('import', int, 'Enable/disable import operation'),
+        ('apikey', str, 'JCDecaux API key', None),
+        ('fetch', int, 'Enable/disable fetch operation', 0),
+        ('import', int, 'Enable/disable import operation', 0),
     )
 
     def __init__(self, args):
