@@ -66,6 +66,10 @@ class AppDB:
         # don't suppress the eventual exception
         return False
 
+    def vacuum(self):
+        if self.connection is not None:
+            self.connection.execute("vacuum")
+
 # settings table
 class SettingsDAO:
 
@@ -235,8 +239,9 @@ class AdminCmd:
         self._args = args
 
     def vacuum(self):
-        # TODO: vacuum db
-        print "vacuum"
+        print "Vacuuming AppDB"
+        with AppDB() as db:
+            db.vacuum()
 
     def run(self):
         for param, value in self._args.__dict__.iteritems():
