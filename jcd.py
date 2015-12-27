@@ -140,6 +140,27 @@ class ApiCacheDAO:
             print "%s: %s" % (type(e).__name__, e)
             raise JcdException("Database error while creating table [%s]" % self.TableName)
 
+# access jcdecaux web api
+class ApiAccess:
+
+    def __init__(self, apikey):
+        self._apikey = apikey
+
+    def getContractStation(self,contract_name,station_id):
+        # TODO: implement getContractStation
+        # TODO: test for api error
+        return None
+
+    def getContractStations(self,contract_name):
+        # TODO: implement getContractStations
+        # TODO: test for api error
+        return None
+
+    def getContracts(self):
+        # TODO: implement getContracts
+        # TODO: test for api error
+        return None
+
 # initialize application data
 class InitCmd:
 
@@ -243,6 +264,25 @@ class AdminCmd:
         with AppDB() as db:
             db.vacuum()
 
+    def apitest(self):
+        print "Testing JCDecaux API access"
+        with AppDB() as db:
+            # fetch api key
+            settings = SettingsDAO(db)
+            apikey, last_modified = settings.getParameter("apikey")
+            if apikey is None:
+                raise JcdException(
+                    "API key is not set ! "
+                    "Please configure using 'config --apikey'")
+            # real testing
+            api = ApiAccess(apikey)
+            # get all available contracts
+            contracts = api.getContracts()
+            # TODO : get all stations of first contract
+            stations = api.getContractStations(None)
+            # TODO : get first station of first contract
+            station = api.getContractStation(None,None)
+
     def run(self):
         for param, value in self._args.__dict__.iteritems():
             f = getattr(self, param)
@@ -304,6 +344,11 @@ class App:
             '--vacuum',
             action = 'store_true',
             help = 'defragment and trim sqlite database',
+        )
+        admin.add_argument(
+            '--apitest',
+            action = 'store_true',
+            help = 'test JCDecaux API access'
         )
 
     def run(self):
