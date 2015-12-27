@@ -106,7 +106,10 @@ class SettingsDAO:
                     FROM %s
                     WHERE name = ?
                 ''' % self.TableName, (name,))
-            return results.fetchone()
+            r = results.fetchone()
+            if r is None:
+                return (None, None)
+            return r
         except sqlite3.Error as e:
             print "%s: %s" % (type(e).__name__, e)
             raise JcdException("Database error while fetching parameter [%s]" % name)
