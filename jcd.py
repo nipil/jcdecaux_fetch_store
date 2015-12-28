@@ -24,11 +24,14 @@
 # DEALINGS IN THE SOFTWARE.
 
 import sys
+import json
 import errno
 import shutil
+import random
 import os.path
 import sqlite3
 import argparse
+import requests
 
 # applications specific exception
 class JcdException(Exception):
@@ -143,23 +146,45 @@ class ApiCacheDAO:
 # access jcdecaux web api
 class ApiAccess:
 
+    BaseUrl = "https://api.jcdecaux.com/vls/v1"
+
     def __init__(self, apikey):
         self._apikey = apikey
 
+    def _parseReply(self, reply_text):
+	reply_json = json.loads(reply_text)
+	if type(reply_json) is dict and reply_json.has_key("error"):
+            error = reply_json["error"]
+            # Test for invalid API key
+            if error == "Unauthorized":
+                # TODO: disable fetch
+                pass
+            raise JcdException("JCDecaux API exception: %s" % reply_json["error"])
+        return reply_json
+
+    def _get(self, sub_url, payload = {}):
+        # add the api key to the call
+        payload["apiKey"] = self._apikey
+        url = "%s/%s" % (self.BaseUrl, sub_url)
+        headers = { "Accept": "application/json" }
+        try:
+            r = requests.get(url, params=payload, headers=headers)
+            # avoid ultra-slow character set auto-detection
+            # see https://github.com/kennethreitz/requests/issues/2359
+            r.encoding = "utf-8"
+            # check for api error
+            return self._parseReply(r.text)
+        except requests.exceptions.RequestException as e:
+            raise JcdException("JCDecaux Requests exception: (%s) %s" % (type(e).__name__, e))
+
     def getContractStation(self,contract_name,station_id):
-        # TODO: implement getContractStation
-        # TODO: test for api error
-        return None
+        return self._get("stations/%i" % station_id, {"contract": contract_name})
 
     def getContractStations(self,contract_name):
-        # TODO: implement getContractStations
-        # TODO: test for api error
-        return None
+        return self._get("stations", {"contract": contract_name})
 
     def getContracts(self):
-        # TODO: implement getContracts
-        # TODO: test for api error
-        return None
+        return self._get("contracts")
 
 # initialize application data
 class InitCmd:
@@ -277,11 +302,27 @@ class AdminCmd:
             # real testing
             api = ApiAccess(apikey)
             # get all available contracts
+            print "Searching contracts ..."
             contracts = api.getContracts()
-            # TODO : get all stations of first contract
-            stations = api.getContractStations(None)
-            # TODO : get first station of first contract
-            station = api.getContractStation(None,None)
+            c = len(contracts)
+            print "Found %i contracts." % c
+            # get a random contract
+            r = random.randint(0,c-1)
+            contract = contracts[r]
+            cn = contract["name"]
+            print "Fetching stations contract [%s] ..." % cn
+            stations = api.getContractStations(cn)
+            c = len(stations)
+            print "Found %i stations." % c
+            # get a random contract
+            r = random.randint(0,c-1)
+            station = stations[r]
+            sn = station["number"]
+            print "Fetching a single station [%i] of contract [%s] ..." % (sn,cn)
+            station = api.getContractStation(cn,sn)
+            print "Station name is [%s]" % station["name"]
+            # test OK
+            print "API TEST SUCCESS"
 
     def run(self):
         for param, value in self._args.__dict__.iteritems():
