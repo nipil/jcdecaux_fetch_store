@@ -122,9 +122,9 @@ class SettingsDAO:
             raise JcdException("Database error while fetching parameter [%s]" % name)
 
 # settings table
-class ApiCacheDAO:
+class NewSamplesDAO:
 
-    TableName = "api_cache"
+    TableName = "new_samples"
 
     def __init__(self, database):
         self._database = database
@@ -134,12 +134,17 @@ class ApiCacheDAO:
         try:
             self._database.connection.execute(
                 '''CREATE TABLE %s(
-                url TEXT,
+                contract_name STRING,
+                station_number INT,
+                age INTEGER,
                 timestamp INTEGER,
-                json TEXT NOT NULL,
-                PRIMARY KEY(url,timestamp)
+                last_update INTEGER,
+                bike INTEGER,
+                empty INTEGER,
+                status INTEGER,
+                PRIMARY KEY (contract_name, station_number, age)
                 )''' % self.TableName)
-        except Sqlite3.Error as e:
+        except sqlite3.Error as e:
             print "%s: %s" % (type(e).__name__, e)
             raise JcdException("Database error while creating table [%s]" % self.TableName)
 
@@ -221,8 +226,8 @@ class InitCmd:
         with AppDB() as db:
             settings = SettingsDAO(db)
             settings.createTable()
-            apiCache = ApiCacheDAO(db)
-            apiCache.createTable()
+            newSamples = NewSamplesDAO(db)
+            newSamples.createTable()
 
     # set default parameters
     def setDefaultParameters(self):
