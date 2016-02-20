@@ -365,6 +365,24 @@ class AdminCmd:
             else:
                 f(value)
 
+# fetch information from api:
+class FetchCmd:
+
+    def __init__(self, args):
+        self._args = args
+
+    def _fetchContracts(self):
+        print "fetchContracts"
+
+    def _fetchState(self):
+        print "fetchState"
+
+    def run(self):
+        if self._args.contracts:
+            self._fetchContracts()
+        if self._args.state:
+            self._fetchState()
+
 # main app
 class App:
 
@@ -422,6 +440,22 @@ class App:
             action = 'store_true',
             help = 'test JCDecaux API access'
         )
+        # fetch command
+        fetch = top_command.add_parser(
+            'fetch',
+            help = 'get information from the API',
+            description = 'Get from API'
+        )
+        fetch.add_argument(
+            '--contracts', '-c',
+            action = 'store_true',
+            help = 'get contracts'
+        )
+        fetch.add_argument(
+            '--state', '-s',
+            action = 'store_true',
+            help = 'get current state'
+        )
 
     def run(self):
         try:
@@ -449,6 +483,10 @@ class App:
     def admin(self, args):
         admin = AdminCmd(args)
         admin.run()
+
+    def fetch(self, args):
+        fetch = FetchCmd(args)
+        fetch.run()
 
 # main
 if __name__ == '__main__':
