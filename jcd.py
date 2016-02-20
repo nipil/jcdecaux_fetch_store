@@ -11,7 +11,7 @@
 # the rights to use, copy, modify, merge, publish, distribute, sublicense,
 # and/or sell copies of the Software, and to permit persons to whom the
 # Software is furnished to do so, subject to the following conditions:
-# 
+#
 # The above copyright notice and this permission notice shall be included
 # in all copies or substantial portions of the Software.
 #
@@ -121,6 +121,30 @@ class SettingsDAO:
             print "%s: %s" % (type(e).__name__, e)
             raise JcdException("Database error while fetching parameter [%s]" % name)
 
+# contract table
+class ContractsDAO:
+
+    TableName = "contracts"
+
+    def __init__(self, database):
+        self._database = database
+
+    def createTable(self):
+        print "Creating table [%s]" % self.TableName
+        try:
+            self._database.connection.execute(
+                '''CREATE TABLE %s(
+                id INT,
+                name STRING UNIQUE,
+                commercial_name STRING,
+                country_code STRING,
+                cities STRING,
+                PRIMARY KEY (id)
+                )''' % self.TableName)
+        except sqlite3.Error as e:
+            print "%s: %s" % (type(e).__name__, e)
+            raise JcdException("Database error while creating table [%s]" % self.TableName)
+
 # settings table
 class NewSamplesDAO:
 
@@ -226,6 +250,8 @@ class InitCmd:
         with AppDB() as db:
             settings = SettingsDAO(db)
             settings.createTable()
+            contracts = ContractsDAO(db)
+            contracts.createTable()
             newSamples = NewSamplesDAO(db)
             newSamples.createTable()
 
