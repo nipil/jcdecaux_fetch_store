@@ -134,16 +134,39 @@ class ContractsDAO:
         try:
             self._database.connection.execute(
                 '''CREATE TABLE %s(
-                id INT,
-                name STRING UNIQUE,
-                commercial_name STRING,
-                country_code STRING,
-                cities STRING,
+                id INTEGER,
+                name TEXT UNIQUE,
+                commercial_name TEXT,
+                country_code TEXT,
+                cities TEXT,
                 PRIMARY KEY (id)
                 )''' % self.TableName)
         except sqlite3.Error as e:
             print "%s: %s" % (type(e).__name__, e)
             raise JcdException("Database error while creating table [%s]" % self.TableName)
+
+    def storeContracts(self, json):
+        contract = None
+        try:
+            for contract in json:
+                try:
+                    self._database.connection.execute(
+                        '''INSERT INTO
+                            %s(name,commercial_name,country_code,cities)
+                            VALUES(?,?,?,?)
+                        ''' % self.TableName, (
+                            contract["name"],
+                            contract["commercial_name"],
+                            contract["country_code"],
+                            "/".join(contract["cities"])))
+                except sqlite3.IntegrityError:
+                    # don't duplicate or replace because id's would change
+                    pass
+            # once everything is added without real error, commit
+            self._database.connection.commit()
+        except sqlite3.Error as e:
+            print "%s: %s" % (type(e).__name__, e)
+            raise JcdException("Database error while inserting contract [%s]" % contract)
 
 # settings table
 class NewSamplesDAO:
@@ -372,7 +395,19 @@ class FetchCmd:
         self._args = args
 
     def _fetchContracts(self):
-        print "fetchContracts"
+        with AppDB() as db:
+            # fetch api key
+            settings = SettingsDAO(db)
+            apikey, last_modified = settings.getParameter("apikey")
+            if apikey is None:
+                raise JcdException(
+                    "API key is not set ! "
+                    "Please configure using 'config --apikey'")
+            # get all available contracts
+            api = ApiAccess(apikey)
+            json = api.getContracts()
+            dao = ContractsDAO(db)
+            dao.storeContracts(json)
 
     def _fetchState(self):
         print "fetchState"
