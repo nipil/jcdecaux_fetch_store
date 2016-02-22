@@ -269,14 +269,14 @@ class FullSamplesDAO:
 class ShortSamplesDAO:
 
     TableNameChanged = "changed_samples"
+    TableNameArchive = "archived_samples"
 
     def __init__(self, database):
         self._database = database
 
-    def _createTable(self, tableName):
-        print "Creating table [%s]" % tableName
+    def _createTable(self, db, tableName):
         try:
-            self._database.connection.execute(
+            db.connection.execute(
                 '''CREATE TABLE %s(
                 timestamp INTEGER NOT NULL,
                 contract_id INTEGER NOT NULL,
@@ -290,7 +290,8 @@ class ShortSamplesDAO:
             raise JcdException("Database error while creating table [%s]" % tableName)
 
     def createTableChanged(self):
-        self._createTable(self.TableNameChanged)
+        print "Creating table [%s]" % self.TableNameChanged
+        self._createTable(self._database,self.TableNameChanged)
 
     def buildChangedSamples(self):
         try:
@@ -333,6 +334,17 @@ class ShortSamplesDAO:
         except sqlite3.Error as e:
             print "%s: %s" % (type(e).__name__, e)
             raise JcdException("Database error getting changed date list")
+
+    def getDateDbName(self, date):
+        return "samples-%s.db" % date
+
+    def initializeDateDb(self, date):
+        dbname = self.getDateDbName(date)
+        with SqliteDB(dbname) as storage_db:
+            if not storage_db.hasTable(self.TableNameArchive):
+                self._createTable(storage_db,self.TableNameArchive)
+                return True
+        return False
 
 # access jcdecaux web api
 class ApiAccess:
@@ -602,8 +614,11 @@ class StoreCmd:
             # prepare archive storage if needed
             stats = short_dao.getChangedStatistics()
             for date, count in stats:
-                print date, count
-            # TODO: archive changes
+                created = short_dao.initializeDateDb(date)
+                if created and self._args.verbose:
+                    print "Creating archive database for date [%s]" % date
+            # TODO: attach date databases to main databases
+            # TODO: move samples around
             # cleanup and do age samples
             full_dao = FullSamplesDAO(db)
             full_dao.moveNewSamplesIntoOld()
