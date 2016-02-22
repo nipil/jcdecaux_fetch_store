@@ -41,7 +41,7 @@ class JcdException(Exception):
         Exception.__init__(self,*args,**kwargs)
 
 # manages access to the application database
-class AppDB:
+class SqliteDB:
 
     FileName = None
 
@@ -399,7 +399,7 @@ class InitCmd:
             raise
 
     def _createTables(self):
-        with AppDB() as db:
+        with SqliteDB() as db:
             settings = SettingsDAO(db)
             settings.createTable()
             contracts = ContractsDAO(db)
@@ -411,7 +411,7 @@ class InitCmd:
 
     # set default parameters
     def setDefaultParameters(self):
-        with AppDB() as db:
+        with SqliteDB() as db:
             settings = SettingsDAO(db)
             for value in ConfigCmd.Parameters:
                 if value[3] is not None:
@@ -442,13 +442,13 @@ class ConfigCmd:
         self._args = args
 
     def displayParam(self,param):
-        with AppDB() as db:
+        with SqliteDB() as db:
             settings = SettingsDAO(db)
             (value, last_modification) = settings.getParameter(param)
             print "%s = %s (last modified on %s)" % (param, value, last_modification)
 
     def updateParam(self,param,value):
-        with AppDB() as db:
+        with SqliteDB() as db:
             settings = SettingsDAO(db)
             settings.setParameter(param,value)
             # if all went well
@@ -478,13 +478,13 @@ class AdminCmd:
         self._args = args
 
     def vacuum(self):
-        print "Vacuuming AppDB"
-        with AppDB() as db:
+        print "Vacuuming SqliteDB"
+        with SqliteDB() as db:
             db.vacuum()
 
     def apitest(self):
         print "Testing JCDecaux API access"
-        with AppDB() as db:
+        with SqliteDB() as db:
             # fetch api key
             settings = SettingsDAO(db)
             apikey, last_modified = settings.getParameter("apikey")
@@ -534,7 +534,7 @@ class FetchCmd:
         self._args = args
 
     def _fetchContracts(self):
-        with AppDB() as db:
+        with SqliteDB() as db:
             # fetch api key
             settings = SettingsDAO(db)
             apikey, last_modified = settings.getParameter("apikey")
@@ -553,7 +553,7 @@ class FetchCmd:
                 print "New contracts added: %i" % new_contracts_count
 
     def _fetchState(self):
-        with AppDB() as db:
+        with SqliteDB() as db:
             # fetch api key
             settings = SettingsDAO(db)
             apikey, last_modified = settings.getParameter("apikey")
@@ -582,7 +582,7 @@ class StoreCmd:
         self._args = args
 
     def run(self):
-        with AppDB() as db:
+        with SqliteDB() as db:
             # analyse changes
             short_dao = ShortSamplesDAO(db)
             num_changed_samples = short_dao.buildChangedSamples()
@@ -608,7 +608,7 @@ class App:
         # store data path
         self._default_data_path = default_data_path
         # store main DB filename
-        AppDB.FileName = default_app_dbname
+        SqliteDB.FileName = default_app_dbname
         # top parser
         self._parser = argparse.ArgumentParser(description = 'Fetch and store JCDecaux API results')
         # top level argument for data destination
