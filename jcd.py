@@ -24,6 +24,7 @@
 # DEALINGS IN THE SOFTWARE.
 
 import sys
+import time
 import json
 import errno
 import shutil
@@ -186,19 +187,55 @@ class NewSamplesDAO:
         try:
             self._database.connection.execute(
                 '''CREATE TABLE %s(
-                contract_name STRING,
-                station_number INT,
-                age INTEGER,
-                timestamp INTEGER,
+                timestamp INTEGER NOT NULL,
+                contract_id INTEGER NOT NULL,
+                station_number INTEGR NOT NULL,
+                available_bikes INTEGER NOT NULL,
+                available_bike_stands INTEGER NOT NULL,
+                status INTEGER NOT NULL,
+                bike_stands INTEGER NOT NULL,
+                bonus INTEGER NOT NULL,
+                banking INTEGER NOT NULL,
+                position TEXT NOT NULL,
+                address TEXT NOT NULL,
+                station_name TEXT NOT NULL,
                 last_update INTEGER,
-                bike INTEGER,
-                empty INTEGER,
-                status INTEGER,
-                PRIMARY KEY (contract_name, station_number, age)
+                PRIMARY KEY (contract_id, station_number)
                 )''' % self.TableName)
         except sqlite3.Error as e:
             print "%s: %s" % (type(e).__name__, e)
             raise JcdException("Database error while creating table [%s]" % self.TableName)
+
+    def storeSamples(self, json):
+        # get current time in UTC
+        timestamp = int(time.time())
+        # adapt json to database schema
+        for station in json:
+            station["timestamp"] = timestamp
+            station["status"] = 1 if station["status"] == "OPEN" else 0
+            station["bonus"] = 1 if station["bonus"] == True else 0
+            station["banking"] = 1 if station["banking"] == True else 0
+            station["position"] = "/".join(map(str,station["position"].values()))
+        try:
+            # insert station data
+            req = self._database.connection.executemany(
+                '''INSERT OR REPLACE INTO %s(timestamp,
+                    contract_id, station_number, available_bikes,
+                    available_bike_stands, status, bike_stands,
+                    bonus, banking, position, address,
+                    station_name, last_update)
+                    VALUES(:timestamp, (SELECT id FROM %s
+                        WHERE name = :contract_name),
+                    :number, :available_bikes,
+                    :available_bike_stands, :status, :bike_stands,
+                    :bonus, :banking, :position, :address,
+                    :name, :last_update)
+                ''' % (self.TableName, ContractsDAO.TableName), json)
+            # if everything went fine
+            self._database.connection.commit()
+        except sqlite3.Error as e:
+            print "%s: %s" % (type(e).__name__, e)
+            raise JcdException("Database error while inserting state")
 
 # access jcdecaux web api
 class ApiAccess:
@@ -418,7 +455,19 @@ class FetchCmd:
             dao.storeContracts(json)
 
     def _fetchState(self):
-        print "fetchState"
+        with AppDB() as db:
+            # fetch api key
+            settings = SettingsDAO(db)
+            apikey, last_modified = settings.getParameter("apikey")
+            if apikey is None:
+                raise JcdException(
+                    "API key is not set ! "
+                    "Please configure using 'config --apikey'")
+            # get all station states
+            api = ApiAccess(apikey)
+            json = api.getStations()
+            dao = NewSamplesDAO(db)
+            dao.storeSamples(json)
 
     def run(self):
         if self._args.contracts:
