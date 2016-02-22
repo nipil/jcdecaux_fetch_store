@@ -474,6 +474,18 @@ class FetchCmd:
         if self._args.state:
             self._fetchState()
 
+# store state into database:
+class StoreCmd:
+
+    def __init__(self, args):
+        self._args = args
+
+    def _storeLatest(self):
+        print "storeLatest"
+
+    def run(self):
+        self._storeLatest()
+
 # main app
 class App:
 
@@ -547,6 +559,12 @@ class App:
             action = 'store_true',
             help = 'get current state'
         )
+        # store command
+        store = top_command.add_parser(
+            'store',
+            help = 'store fetched state into database',
+            description = 'Store state in database'
+        )
 
     def run(self):
         try:
@@ -580,6 +598,9 @@ class App:
         fetch = FetchCmd(args)
         fetch.run()
 
+    def store(self, args):
+        store = StoreCmd(args)
+        store.run()
 # main
 if __name__ == '__main__':
     app = App("~/.jcd")
