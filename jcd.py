@@ -43,9 +43,9 @@ class JcdException(Exception):
 # manages access to the application database
 class AppDB:
 
-    FileName = "app.db"
+    FileName = None
 
-    def __init__(self):
+    def __init__(self, db_filename = FileName):
         self._db_path = os.path.normpath("%s/%s" % (App.DataPath,self.FileName))
         self.connection = None
 
@@ -604,9 +604,11 @@ class App:
 
     DataPath = None
 
-    def __init__(self, default_data_path):
+    def __init__(self, default_data_path, default_app_dbname):
         # store data path
         self._default_data_path = default_data_path
+        # store main DB filename
+        AppDB.FileName = default_app_dbname
         # top parser
         self._parser = argparse.ArgumentParser(description = 'Fetch and store JCDecaux API results')
         # top level argument for data destination
@@ -721,7 +723,7 @@ class App:
         store.run()
 # main
 if __name__ == '__main__':
-    app = App("~/.jcd")
+    app = App("~/.jcd","app.db")
     try:
         app.run()
     except KeyboardInterrupt:
