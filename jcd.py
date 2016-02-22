@@ -234,6 +234,9 @@ class ApiAccess:
         except requests.exceptions.RequestException as e:
             raise JcdException("JCDecaux Requests exception: (%s) %s" % (type(e).__name__, e))
 
+    def getStations(self):
+        return self._get("stations")
+
     def getContractStation(self,contract_name,station_id):
         return self._get("stations/%i" % station_id, {"contract": contract_name})
 
