@@ -563,6 +563,7 @@ class App:
             command(args)
         except JcdException as e:
             print e
+            sys.exit(1)
 
     def init(self, args):
         init = InitCmd(args)
