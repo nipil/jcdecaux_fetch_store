@@ -297,6 +297,7 @@ class ShortSamplesDAO:
                 WHERE new.available_bikes != old.available_bikes OR
                     new.available_bike_stands != old.available_bike_stands OR
                     old.station_number IS NULL
+                ORDER BY new.timestamp, new.contract_id, new.station_number
                 ''' % (self.TableNameChanged,
                     FullSamplesDAO.TableNameNew,
                     FullSamplesDAO.TableNameOld))
