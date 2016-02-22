@@ -58,6 +58,10 @@ class AppDB:
             self.connection.close()
         self.connection = None
 
+    def commit(self):
+        if self.connection is not None:
+            self.connection.commit()
+
     def __enter__(self):
         # open the connection if it's not already open
         self.open()
@@ -102,7 +106,6 @@ class SettingsDAO:
                     %s(name,value,last_modification)
                     VALUES(?,?, strftime('%%s', 'now'))
                 ''' % self.TableName, (name,value))
-            self._database.connection.commit()
         except sqlite3.Error as e:
             print "%s: %s" % (type(e).__name__, e)
             raise JcdException("Database error while setting parameter [%s]" % name)
@@ -164,11 +167,8 @@ class ContractsDAO:
                     %s(contract_id,contract_name,commercial_name,country_code,cities)
                     VALUES(NULL,:name,:commercial_name,:country_code,:cities)
                 ''' % self.TableName, json)
-            # notify if new contracts were added
-            if req.rowcount > 0:
-                print "New contracts added: %i" % req.rowcount
-            # if everything went fine
-            self._database.connection.commit()
+            # return number of inserted records
+            return req.rowcount
         except sqlite3.Error as e:
             print "%s: %s" % (type(e).__name__, e)
             raise JcdException("Database error while inserting contracts")
@@ -235,8 +235,6 @@ class FullSamplesDAO:
                     :bonus, :banking, :position, :address,
                     :name, :last_update)
                 ''' % (self.TableNameNew, ContractsDAO.TableName), json)
-            # if everything went fine
-            self._database.connection.commit()
         except sqlite3.Error as e:
             print "%s: %s" % (type(e).__name__, e)
             raise JcdException("Database error while inserting state")
@@ -250,8 +248,6 @@ class FullSamplesDAO:
             self._database.connection.execute(
                 '''DELETE FROM %s
                 ''' % self.TableNameNew)
-            # if everything went fine
-            self._database.connection.commit()
         except sqlite3.Error as e:
             print "%s: %s" % (type(e).__name__, e)
             raise JcdException("Database error moving new samples into old")
@@ -288,7 +284,7 @@ class ShortSamplesDAO:
             self._database.connection.execute(
                 '''DELETE FROM %s
                 ''' % self.TableNameChanged)
-            self._database.connection.execute(
+            req = self._database.connection.execute(
                 '''INSERT INTO %s
                 SELECT new.timestamp,
                     new.contract_id,
@@ -304,8 +300,8 @@ class ShortSamplesDAO:
                 ''' % (self.TableNameChanged,
                     FullSamplesDAO.TableNameNew,
                     FullSamplesDAO.TableNameOld))
-            # if everything went fine
-            self._database.connection.commit()
+            # return number of inserted records
+            return req.rowcount
         except sqlite3.Error as e:
             print "%s: %s" % (type(e).__name__, e)
             raise JcdException("Database error building changed samples")
@@ -406,6 +402,8 @@ class InitCmd:
                 if value[3] is not None:
                     print "Setting parameter [%s] to default value [%s]" % (value[0],value[3])
                     settings.setParameter(value[0], value[3])
+            # if all went well
+            db.commit()
 
     def run(self):
         # remove folder if creation is forced
@@ -438,6 +436,8 @@ class ConfigCmd:
         with AppDB() as db:
             settings = SettingsDAO(db)
             settings.setParameter(param,value)
+            # if all went well
+            db.commit()
             print "Setting %s = %s" % (param,value)
 
     def run(self):
@@ -527,7 +527,11 @@ class FetchCmd:
             api = ApiAccess(apikey)
             json = api.getContracts()
             dao = ContractsDAO(db)
-            dao.storeContracts(json)
+            new_contracts_count = dao.storeContracts(json)
+            # if everything went fine
+            db.commit()
+            if new_contracts_count > 0:
+                print "New contracts added: %i" % new_contracts_count
 
     def _fetchState(self):
         with AppDB() as db:
@@ -543,6 +547,8 @@ class FetchCmd:
             json = api.getStations()
             dao = FullSamplesDAO(db)
             dao.storeNewSamples(json)
+            # if everything went fine
+            db.commit()
 
     def run(self):
         if self._args.contracts:
@@ -559,9 +565,13 @@ class StoreCmd:
     def run(self):
         with AppDB() as db:
             short_dao = ShortSamplesDAO(db)
-            short_dao.buildChangedSamples()
+            num_changed_samples = short_dao.buildChangedSamples()
             full_dao = FullSamplesDAO(db)
             full_dao.moveNewSamplesIntoOld()
+            # if everything went fine
+            db.commit()
+            if num_changed_samples > 0:
+                print "Changed samples: %i" % num_changed_samples
 
 # main app
 class App:
