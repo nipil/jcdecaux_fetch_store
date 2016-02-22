@@ -43,10 +43,9 @@ class JcdException(Exception):
 # manages access to the application database
 class SqliteDB:
 
-    FileName = None
-
-    def __init__(self, db_filename = FileName):
-        self._db_path = os.path.normpath("%s/%s" % (App.DataPath,self.FileName))
+    def __init__(self, db_filename):
+        self._db_filename = db_filename
+        self._db_path = os.path.normpath("%s/%s" % (App.DataPath,self._db_filename))
         self.connection = None
 
     def open(self):
@@ -399,7 +398,7 @@ class InitCmd:
             raise
 
     def _createTables(self):
-        with SqliteDB() as db:
+        with SqliteDB(App.DbName) as db:
             settings = SettingsDAO(db)
             settings.createTable()
             contracts = ContractsDAO(db)
@@ -411,7 +410,7 @@ class InitCmd:
 
     # set default parameters
     def setDefaultParameters(self):
-        with SqliteDB() as db:
+        with SqliteDB(App.DbName) as db:
             settings = SettingsDAO(db)
             for value in ConfigCmd.Parameters:
                 if value[3] is not None:
@@ -442,13 +441,13 @@ class ConfigCmd:
         self._args = args
 
     def displayParam(self,param):
-        with SqliteDB() as db:
+        with SqliteDB(App.DbName) as db:
             settings = SettingsDAO(db)
             (value, last_modification) = settings.getParameter(param)
             print "%s = %s (last modified on %s)" % (param, value, last_modification)
 
     def updateParam(self,param,value):
-        with SqliteDB() as db:
+        with SqliteDB(App.DbName) as db:
             settings = SettingsDAO(db)
             settings.setParameter(param,value)
             # if all went well
@@ -479,12 +478,12 @@ class AdminCmd:
 
     def vacuum(self):
         print "Vacuuming SqliteDB"
-        with SqliteDB() as db:
+        with SqliteDB(App.DbName) as db:
             db.vacuum()
 
     def apitest(self):
         print "Testing JCDecaux API access"
-        with SqliteDB() as db:
+        with SqliteDB(App.DbName) as db:
             # fetch api key
             settings = SettingsDAO(db)
             apikey, last_modified = settings.getParameter("apikey")
@@ -534,7 +533,7 @@ class FetchCmd:
         self._args = args
 
     def _fetchContracts(self):
-        with SqliteDB() as db:
+        with SqliteDB(App.DbName) as db:
             # fetch api key
             settings = SettingsDAO(db)
             apikey, last_modified = settings.getParameter("apikey")
@@ -553,7 +552,7 @@ class FetchCmd:
                 print "New contracts added: %i" % new_contracts_count
 
     def _fetchState(self):
-        with SqliteDB() as db:
+        with SqliteDB(App.DbName) as db:
             # fetch api key
             settings = SettingsDAO(db)
             apikey, last_modified = settings.getParameter("apikey")
@@ -582,7 +581,7 @@ class StoreCmd:
         self._args = args
 
     def run(self):
-        with SqliteDB() as db:
+        with SqliteDB(App.DbName) as db:
             # analyse changes
             short_dao = ShortSamplesDAO(db)
             num_changed_samples = short_dao.buildChangedSamples()
@@ -603,12 +602,13 @@ class StoreCmd:
 class App:
 
     DataPath = None
+    DbName = None
 
     def __init__(self, default_data_path, default_app_dbname):
         # store data path
         self._default_data_path = default_data_path
-        # store main DB filename
-        SqliteDB.FileName = default_app_dbname
+        # store main dbname
+        self._default_app_dbname = default_app_dbname
         # top parser
         self._parser = argparse.ArgumentParser(description = 'Fetch and store JCDecaux API results')
         # top level argument for data destination
@@ -616,6 +616,11 @@ class App:
             '--datadir',
             help = 'choose data folder (default: %s)' % default_data_path,
             default = default_data_path
+        )
+        self._parser.add_argument(
+            '--dbname',
+            help = 'choose db filename (default: %s)' % default_app_dbname,
+            default = default_app_dbname
         )
         self._parser.add_argument(
             '--verbose', '-v',
@@ -692,7 +697,9 @@ class App:
             args = self._parser.parse_args()
             # consume data-path argument
             App.DataPath = os.path.expanduser(args.datadir)
-            del args.datadir
+            # consume db name argument
+            App.DbName = os.path.expanduser(args.dbname)
+            del args.dbname
             # consume command
             command = getattr(self, args.command)
             del args.command
