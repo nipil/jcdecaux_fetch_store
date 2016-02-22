@@ -87,9 +87,9 @@ class SettingsDAO:
         try:
             self._database.connection.execute(
                 '''CREATE TABLE %s(
-                    name TEXT PRIMARY KEY,
+                    name TEXT PRIMARY KEY NOT NULL,
                     value, -- no type, use affinity
-                    last_modification INTEGER
+                    last_modification INTEGER NOT NULL
                 )''' % self.TableName)
         except sqlite3.Error as e:
             print "%s: %s" % (type(e).__name__, e)
@@ -135,12 +135,11 @@ class ContractsDAO:
         try:
             self._database.connection.execute(
                 '''CREATE TABLE %s(
-                contract_id INTEGER,
-                contract_name TEXT UNIQUE,
-                commercial_name TEXT,
-                country_code TEXT,
-                cities TEXT,
-                PRIMARY KEY (contract_id)
+                contract_id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                contract_name TEXT UNIQUE NOT NULL,
+                commercial_name TEXT NOT NULL,
+                country_code TEXT NOT NULL,
+                cities TEXT NOT NULL
                 )''' % self.TableName)
         except sqlite3.Error as e:
             print "%s: %s" % (type(e).__name__, e)
