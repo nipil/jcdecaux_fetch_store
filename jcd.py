@@ -174,15 +174,20 @@ class ContractsDAO:
             raise JcdException("Database error while inserting contracts")
 
 # settings table
-class NewSamplesDAO:
+class FullSamplesDAO:
 
-    TableName = "new_samples"
+    TableNameNew = "new_samples"
+    TableNameOld = "old_samples"
 
     def __init__(self, database):
         self._database = database
 
-    def createTable(self):
-        print "Creating table [%s]" % self.TableName
+    def createTables(self):
+        self._createTable(self.TableNameNew)
+        self._createTable(self.TableNameOld)
+
+    def _createTable(self, tableName):
+        print "Creating table [%s]" % tableName
         try:
             self._database.connection.execute(
                 '''CREATE TABLE %s(
@@ -200,12 +205,12 @@ class NewSamplesDAO:
                 station_name TEXT NOT NULL,
                 last_update INTEGER,
                 PRIMARY KEY (contract_id, station_number)
-                )''' % self.TableName)
+                )''' % tableName)
         except sqlite3.Error as e:
             print "%s: %s" % (type(e).__name__, e)
-            raise JcdException("Database error while creating table [%s]" % self.TableName)
+            raise JcdException("Database error while creating table [%s]" % tableName)
 
-    def storeSamples(self, json):
+    def storeNewSamples(self, json):
         # get current time in UTC
         timestamp = int(time.time())
         # adapt json to database schema
@@ -229,12 +234,81 @@ class NewSamplesDAO:
                     :available_bike_stands, :status, :bike_stands,
                     :bonus, :banking, :position, :address,
                     :name, :last_update)
-                ''' % (self.TableName, ContractsDAO.TableName), json)
+                ''' % (self.TableNameNew, ContractsDAO.TableName), json)
             # if everything went fine
             self._database.connection.commit()
         except sqlite3.Error as e:
             print "%s: %s" % (type(e).__name__, e)
             raise JcdException("Database error while inserting state")
+
+    def moveNewSamplesIntoOld(self):
+        try:
+            self._database.connection.execute(
+                '''INSERT OR REPLACE INTO %s
+                    SELECT * FROM %s
+                ''' % (self.TableNameOld, self.TableNameNew))
+            self._database.connection.execute(
+                '''DELETE FROM %s
+                ''' % self.TableNameNew)
+            # if everything went fine
+            self._database.connection.commit()
+        except sqlite3.Error as e:
+            print "%s: %s" % (type(e).__name__, e)
+            raise JcdException("Database error moving new samples into old")
+
+# stored sample DAO
+class ShortSamplesDAO:
+
+    TableNameChanged = "changed_samples"
+
+    def __init__(self, database):
+        self._database = database
+
+    def _createTable(self, tableName):
+        print "Creating table [%s]" % tableName
+        try:
+            self._database.connection.execute(
+                '''CREATE TABLE %s(
+                timestamp INTEGER NOT NULL,
+                contract_id INTEGER NOT NULL,
+                station_number INTEGR NOT NULL,
+                available_bikes INTEGER NOT NULL,
+                available_bike_stands INTEGER NOT NULL,
+                PRIMARY KEY (contract_id, station_number)
+                )''' % tableName)
+        except sqlite3.Error as e:
+            print "%s: %s" % (type(e).__name__, e)
+            raise JcdException("Database error while creating table [%s]" % tableName)
+
+    def createTableChanged(self):
+        self._createTable(self.TableNameChanged)
+
+    def buildChangedSamples(self):
+        try:
+            self._database.connection.execute(
+                '''DELETE FROM %s
+                ''' % self.TableNameChanged)
+            self._database.connection.execute(
+                '''INSERT INTO %s
+                SELECT new.timestamp,
+                    new.contract_id,
+                    new.station_number,
+                    new.available_bikes,
+                    new.available_bike_stands
+                FROM %s AS new LEFT OUTER JOIN %s AS old
+                ON new.contract_id=old.contract_id AND
+                    new.station_number = old.station_number
+                WHERE new.available_bikes != old.available_bikes OR
+                    new.available_bike_stands != old.available_bike_stands OR
+                    old.station_number IS NULL
+                ''' % (self.TableNameChanged,
+                    FullSamplesDAO.TableNameNew,
+                    FullSamplesDAO.TableNameOld))
+            # if everything went fine
+            self._database.connection.commit()
+        except sqlite3.Error as e:
+            print "%s: %s" % (type(e).__name__, e)
+            raise JcdException("Database error building changed samples")
 
 # access jcdecaux web api
 class ApiAccess:
@@ -319,8 +393,10 @@ class InitCmd:
             settings.createTable()
             contracts = ContractsDAO(db)
             contracts.createTable()
-            newSamples = NewSamplesDAO(db)
-            newSamples.createTable()
+            full_samples = FullSamplesDAO(db)
+            full_samples.createTables()
+            short_samples = ShortSamplesDAO(db)
+            short_samples.createTableChanged()
 
     # set default parameters
     def setDefaultParameters(self):
@@ -465,8 +541,8 @@ class FetchCmd:
             # get all station states
             api = ApiAccess(apikey)
             json = api.getStations()
-            dao = NewSamplesDAO(db)
-            dao.storeSamples(json)
+            dao = FullSamplesDAO(db)
+            dao.storeNewSamples(json)
 
     def run(self):
         if self._args.contracts:
@@ -480,11 +556,12 @@ class StoreCmd:
     def __init__(self, args):
         self._args = args
 
-    def _storeLatest(self):
-        print "storeLatest"
-
     def run(self):
-        self._storeLatest()
+        with AppDB() as db:
+            short_dao = ShortSamplesDAO(db)
+            short_dao.buildChangedSamples()
+            full_dao = FullSamplesDAO(db)
+            full_dao.moveNewSamplesIntoOld()
 
 # main app
 class App:
