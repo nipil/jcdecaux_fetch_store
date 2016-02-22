@@ -307,6 +307,20 @@ class ShortSamplesDAO:
             print "%s: %s" % (type(e).__name__, e)
             raise JcdException("Database error building changed samples")
 
+    def getChangedStatistics(self):
+        try:
+            req = self._database.connection.execute(
+                '''SELECT DATE(timestamp,'unixepoch') AS day,
+                    COUNT(timestamp) as num_changed_samples
+                    FROM %s
+                    GROUP BY day
+                    ORDER BY day ASC
+                ''' % self.TableNameChanged)
+            return req.fetchall()
+        except sqlite3.Error as e:
+            print "%s: %s" % (type(e).__name__, e)
+            raise JcdException("Database error getting changed date list")
+
 # access jcdecaux web api
 class ApiAccess:
 
@@ -569,8 +583,15 @@ class StoreCmd:
 
     def run(self):
         with AppDB() as db:
+            # analyse changes
             short_dao = ShortSamplesDAO(db)
             num_changed_samples = short_dao.buildChangedSamples()
+            # prepare archive storage if needed
+            stats = short_dao.getChangedStatistics()
+            for date, count in stats:
+                print date, count
+            # TODO: archive changes
+            # cleanup and do age samples
             full_dao = FullSamplesDAO(db)
             full_dao.moveNewSamplesIntoOld()
             # if everything went fine
