@@ -146,23 +146,28 @@ class ContractsDAO:
             raise JcdException("Database error while creating table [%s]" % self.TableName)
 
     def storeContracts(self, json):
-        contract = None
+        # merge cities together
+        for contract in json:
+            contract["cities"] = "/".join(contract["cities"])
         try:
-            for contract in json:
-                try:
-                    self._database.connection.execute(
-                        '''INSERT INTO
-                            %s(name,commercial_name,country_code,cities)
-                            VALUES(?,?,?,?)
-                        ''' % self.TableName, (
-                            contract["name"],
-                            contract["commercial_name"],
-                            contract["country_code"],
-                            "/".join(contract["cities"])))
-                except sqlite3.IntegrityError:
-                    # don't duplicate or replace because id's would change
-                    pass
-            # once everything is added without real error, commit
+            # update any existing contracts
+            self._database.connection.executemany(
+                '''UPDATE OR IGNORE %s SET
+                    commercial_name = :commercial_name,
+                    country_code = :country_code,
+                    cities = :cities
+                    WHERE name = :name
+                ''' % self.TableName, json)
+            # add possible new contracts
+            req = self._database.connection.executemany(
+                '''INSERT OR IGNORE INTO
+                    %s(id,name,commercial_name,country_code,cities)
+                    VALUES(NULL,:name,:commercial_name,:country_code,:cities)
+                ''' % self.TableName, json)
+            # notify if new contracts were added
+            if req.rowcount > 0:
+                print "New contracts added: %i" % req.rowcount
+            # if everything went fine
             self._database.connection.commit()
         except sqlite3.Error as e:
             print "%s: %s" % (type(e).__name__, e)
