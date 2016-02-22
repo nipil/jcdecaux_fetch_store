@@ -135,12 +135,12 @@ class ContractsDAO:
         try:
             self._database.connection.execute(
                 '''CREATE TABLE %s(
-                id INTEGER,
-                name TEXT UNIQUE,
+                contract_id INTEGER,
+                contract_name TEXT UNIQUE,
                 commercial_name TEXT,
                 country_code TEXT,
                 cities TEXT,
-                PRIMARY KEY (id)
+                PRIMARY KEY (contract_id)
                 )''' % self.TableName)
         except sqlite3.Error as e:
             print "%s: %s" % (type(e).__name__, e)
@@ -157,12 +157,12 @@ class ContractsDAO:
                     commercial_name = :commercial_name,
                     country_code = :country_code,
                     cities = :cities
-                    WHERE name = :name
+                    WHERE contract_name = :name
                 ''' % self.TableName, json)
             # add possible new contracts
             req = self._database.connection.executemany(
                 '''INSERT OR IGNORE INTO
-                    %s(id,name,commercial_name,country_code,cities)
+                    %s(contract_id,contract_name,commercial_name,country_code,cities)
                     VALUES(NULL,:name,:commercial_name,:country_code,:cities)
                 ''' % self.TableName, json)
             # notify if new contracts were added
@@ -172,7 +172,7 @@ class ContractsDAO:
             self._database.connection.commit()
         except sqlite3.Error as e:
             print "%s: %s" % (type(e).__name__, e)
-            raise JcdException("Database error while inserting contract [%s]" % contract)
+            raise JcdException("Database error while inserting contracts")
 
 # settings table
 class NewSamplesDAO:
@@ -224,8 +224,8 @@ class NewSamplesDAO:
                     available_bike_stands, status, bike_stands,
                     bonus, banking, position, address,
                     station_name, last_update)
-                    VALUES(:timestamp, (SELECT id FROM %s
-                        WHERE name = :contract_name),
+                    VALUES(:timestamp, (SELECT contract_id FROM %s
+                        WHERE contract_name = :contract_name),
                     :number, :available_bikes,
                     :available_bike_stands, :status, :bike_stands,
                     :bonus, :banking, :position, :address,
