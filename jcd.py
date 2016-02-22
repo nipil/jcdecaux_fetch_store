@@ -443,10 +443,14 @@ class ConfigCmd:
     def run(self):
         # modify each fully provided parameter
         has_modified = False
-        for param, value in self._args.__dict__.iteritems():
-            if value is not None:
-                self.updateParam(param,value)
-                has_modified = True
+        args_dict = self._args.__dict__
+        for value in ConfigCmd.Parameters:
+            param = value[0]
+            if param in args_dict:
+                value = args_dict[param]
+                if value is not None:
+                    self.updateParam(param,value)
+                    has_modified = True
         # if nothing was provided, display all current parameter value
         if not has_modified:
             for value in self.Parameters:
@@ -530,7 +534,7 @@ class FetchCmd:
             new_contracts_count = dao.storeContracts(json)
             # if everything went fine
             db.commit()
-            if new_contracts_count > 0:
+            if new_contracts_count > 0 and self._args.verbose:
                 print "New contracts added: %i" % new_contracts_count
 
     def _fetchState(self):
@@ -570,7 +574,7 @@ class StoreCmd:
             full_dao.moveNewSamplesIntoOld()
             # if everything went fine
             db.commit()
-            if num_changed_samples > 0:
+            if num_changed_samples > 0 and self._args.verbose:
                 print "Changed samples: %i" % num_changed_samples
 
 # main app
@@ -588,6 +592,11 @@ class App:
             '--datadir',
             help = 'choose data folder (default: %s)' % default_data_path,
             default = default_data_path
+        )
+        self._parser.add_argument(
+            '--verbose', '-v',
+            action = 'store_true',
+            help = 'display operationnal informations'
         )
         # top level commands
         top_command = self._parser.add_subparsers(dest='command')
