@@ -77,6 +77,20 @@ class SqliteDB:
         if self.connection is not None:
             self.connection.execute("vacuum")
 
+    def hasTable(self,name):
+        try:
+            req = self.connection.execute(
+                '''SELECT count(*),name
+                FROM sqlite_master
+                WHERE type = 'table' AND
+                name = ?
+                ''', (name,))
+            count, name = req.fetchone();
+            return count != 0
+        except sqlite3.Error as e:
+            print "%s: %s" % (type(e).__name__, e)
+            raise JcdException("Database error checking if table [%s] exists" % name)
+
 # settings table
 class SettingsDAO:
 
