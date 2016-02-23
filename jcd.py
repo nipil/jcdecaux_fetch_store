@@ -579,7 +579,7 @@ class FetchCmd:
             new_contracts_count = dao.storeContracts(json)
             # if everything went fine
             db.commit()
-            if new_contracts_count > 0 and self._args.verbose:
+            if new_contracts_count > 0 and App.Verbose:
                 print "New contracts added: %i" % new_contracts_count
 
     def _fetchState(self):
@@ -620,7 +620,7 @@ class StoreCmd:
             stats = short_dao.getChangedStatistics()
             for date, count in stats:
                 created = short_dao.initializeDateDb(date)
-                if created and self._args.verbose:
+                if created and App.Verbose:
                     print "Creating archive database for date [%s]" % date
             # TODO: attach date databases to main databases
             # TODO: move samples around
@@ -629,7 +629,7 @@ class StoreCmd:
             full_dao.moveNewSamplesIntoOld()
             # if everything went fine
             db.commit()
-            if num_changed_samples > 0 and self._args.verbose:
+            if num_changed_samples > 0 and App.Verbose:
                 print "Changed samples: %i" % num_changed_samples
 
 # main app
@@ -637,6 +637,7 @@ class App:
 
     DataPath = None
     DbName = None
+    Verbose = None
 
     def __init__(self, default_data_path, default_app_dbname):
         # store data path
@@ -731,6 +732,9 @@ class App:
             # consume db name argument
             App.DbName = os.path.expanduser(args.dbname)
             del args.dbname
+            # consume verbose
+            App.Verbose = args.verbose
+            del args.verbose
             # consume command
             command = getattr(self, args.command)
             del args.command
