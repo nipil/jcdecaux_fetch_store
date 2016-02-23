@@ -727,6 +727,7 @@ class App:
             args = self._parser.parse_args()
             # consume data-path argument
             App.DataPath = os.path.expanduser(args.datadir)
+            del args.datadir
             # consume db name argument
             App.DbName = os.path.expanduser(args.dbname)
             del args.dbname
