@@ -499,6 +499,11 @@ class ConfigCmd:
 # administration
 class AdminCmd:
 
+    Parameters = (
+        ('vacuum', 'defragment and trim sqlite database'),
+        ('apitest', 'test JCDecaux API access'),
+    )
+
     def __init__(self, args):
         self._args = args
 
@@ -543,14 +548,14 @@ class AdminCmd:
             print "API TEST SUCCESS"
 
     def run(self):
-        for param, value in self._args.__dict__.iteritems():
-            f = getattr(self, param)
-            if not value:
-                continue
-            if type(value) == bool:
-                f()
-            else:
-                f(value)
+        args_dict = self._args.__dict__
+        for param in AdminCmd.Parameters:
+            name = param[0]
+            if name in args_dict:
+                value = args_dict[name]
+                if type(value) == bool and value:
+                    f = getattr(self, name)
+                    f()
 
 # fetch information from api:
 class FetchCmd:
@@ -687,16 +692,12 @@ class App:
             help = 'administrate application database',
             description = 'Manage database'
         )
-        admin.add_argument(
-            '--vacuum',
-            action = 'store_true',
-            help = 'defragment and trim sqlite database',
-        )
-        admin.add_argument(
-            '--apitest',
-            action = 'store_true',
-            help = 'test JCDecaux API access'
-        )
+        for value in AdminCmd.Parameters:
+            admin.add_argument(
+                '--%s' % value[0],
+                action = 'store_true',
+                help = value[1],
+            )
         # fetch command
         fetch = top_command.add_parser(
             'fetch',
