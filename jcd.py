@@ -429,12 +429,14 @@ class ShortSamplesDAO(object):
             print "%s: %s" % (type(error).__name__, error)
             raise JcdException("Database error getting changed date list")
 
-    def getDateDbName(self, date):
-        return "samples_%s.db" % date
+    def getSchemaName(self, date):
+        return "samples_%s" % date
 
-    def initializeDateDb(self, date):
-        dbname = self.getDateDbName(date)
-        with SqliteDB(dbname) as storage_db:
+    def getDbFileName(self, schema_name):
+        return "%s.db" % schema_name
+
+    def initializeDateDb(self, dbfilename):
+        with SqliteDB(dbfilename) as storage_db:
             if not storage_db.hasTable(self.TableNameArchive):
                 self._createTable(storage_db, self.TableNameArchive)
                 return True
@@ -721,20 +723,25 @@ class StoreCmd(object):
             # analyse changes
             short_dao = ShortSamplesDAO(app_db)
             num_changed_samples = short_dao.buildChangedSamples()
-            # prepare archive storage if needed
+            # daily databases are used
             stats = short_dao.getChangedStatistics()
             for date, count in stats:
-                created = short_dao.initializeDateDb(date)
+                schemas_name = short_dao.getSchemaName(date)
+                db_filename = short_dao.getDbFileName(schemas_name)
+                # prepare archive storage if needed
+                created = short_dao.initializeDateDb(db_filename)
                 if created and App.Verbose:
-                    print "Creating database for date [%s] for %i samples" % (
-                        date, count)
-            # TODO: attach date databases to main databases
+                    print "Creating database [%s] for %i samples" % (
+                        db_filename, count)
+                # attach daily db to main databases
+                # TODO: beware, attaching/detaching commits
+                app_db.attachDatabase(db_filename, schemas_name)
             # TODO: move samples around
             # cleanup and do age samples
-            full_dao = FullSamplesDAO(app_db)
-            full_dao.moveNewSamplesIntoOld()
+            # full_dao = FullSamplesDAO(app_db)
+            # full_dao.moveNewSamplesIntoOld()
             # if everything went fine
-            app_db.commit()
+            # app_db.commit()
             if num_changed_samples > 0 and App.Verbose:
                 print "Changed samples: %i" % num_changed_samples
 
