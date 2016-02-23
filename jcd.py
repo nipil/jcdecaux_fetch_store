@@ -152,6 +152,7 @@ class ContractsDAO:
             self._database.connection.execute(
                 '''CREATE TABLE %s(
                 contract_id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                timestamp INTEGER NOT NULL,
                 contract_name TEXT UNIQUE NOT NULL,
                 commercial_name TEXT NOT NULL,
                 country_code TEXT NOT NULL,
@@ -161,14 +162,16 @@ class ContractsDAO:
             print "%s: %s" % (type(e).__name__, e)
             raise JcdException("Database error while creating table [%s]" % self.TableName)
 
-    def storeContracts(self, json):
+    def storeContracts(self, json, timestamp):
         # merge cities together
         for contract in json:
+            contract["timestamp"] = timestamp
             contract["cities"] = "/".join(contract["cities"])
         try:
             # update any existing contracts
             self._database.connection.executemany(
                 '''UPDATE OR IGNORE %s SET
+                    timestamp = :timestamp,
                     commercial_name = :commercial_name,
                     country_code = :country_code,
                     cities = :cities
@@ -177,8 +180,8 @@ class ContractsDAO:
             # add possible new contracts
             req = self._database.connection.executemany(
                 '''INSERT OR IGNORE INTO
-                    %s(contract_id,contract_name,commercial_name,country_code,cities)
-                    VALUES(NULL,:name,:commercial_name,:country_code,:cities)
+                    %s(contract_id,timestamp,contract_name,commercial_name,country_code,cities)
+                    VALUES(NULL,:timestamp,:name,:commercial_name,:country_code,:cities)
                 ''' % self.TableName, json)
             # return number of inserted records
             return req.rowcount
@@ -223,9 +226,7 @@ class FullSamplesDAO:
             print "%s: %s" % (type(e).__name__, e)
             raise JcdException("Database error while creating table [%s]" % tableName)
 
-    def storeNewSamples(self, json):
-        # get current time in UTC
-        timestamp = int(time.time())
+    def storeNewSamples(self, json, timestamp):
         # adapt json to database schema
         for station in json:
             station["timestamp"] = timestamp
@@ -562,6 +563,7 @@ class FetchCmd:
 
     def __init__(self, args):
         self._args = args
+        self._timestamp = int(time.time())
 
     def _fetchContracts(self):
         with SqliteDB(App.DbName) as db:
@@ -576,7 +578,7 @@ class FetchCmd:
             api = ApiAccess(apikey)
             json = api.getContracts()
             dao = ContractsDAO(db)
-            new_contracts_count = dao.storeContracts(json)
+            new_contracts_count = dao.storeContracts(json,self._timestamp)
             # if everything went fine
             db.commit()
             if new_contracts_count > 0 and App.Verbose:
@@ -595,7 +597,7 @@ class FetchCmd:
             api = ApiAccess(apikey)
             json = api.getStations()
             dao = FullSamplesDAO(db)
-            dao.storeNewSamples(json)
+            dao.storeNewSamples(json,self._timestamp)
             # if everything went fine
             db.commit()
 
