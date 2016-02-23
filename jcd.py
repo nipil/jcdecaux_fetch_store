@@ -37,15 +37,16 @@ import requests
 # applications specific exception
 class JcdException(Exception):
 
-    def __init__(self,*args,**kwargs):
-        Exception.__init__(self,*args,**kwargs)
+    def __init__(self, *args, **kwargs):
+        Exception.__init__(self, *args, **kwargs)
 
 # manages access to the application database
-class SqliteDB:
+class SqliteDB(object):
 
     def __init__(self, db_filename):
         self._db_filename = db_filename
-        self._db_path = os.path.normpath("%s/%s" % (App.DataPath,self._db_filename))
+        self._db_path = os.path.normpath(
+            "%s/%s" % (App.DataPath, self._db_filename))
         self.connection = None
 
     def open(self):
@@ -77,22 +78,23 @@ class SqliteDB:
         if self.connection is not None:
             self.connection.execute("vacuum")
 
-    def hasTable(self,name):
+    def hasTable(self, name):
         try:
             req = self.connection.execute(
-                '''SELECT count(*),name
+                '''
+                SELECT count(*), name
                 FROM sqlite_master
-                WHERE type = 'table' AND
-                name = ?
-                ''', (name,))
-            count, name = req.fetchone();
+                WHERE type = "table" AND name = ?
+                ''', (name, ))
+            count, name = req.fetchone()
             return count != 0
-        except sqlite3.Error as e:
-            print "%s: %s" % (type(e).__name__, e)
-            raise JcdException("Database error checking if table [%s] exists" % name)
+        except sqlite3.Error as error:
+            print "%s: %s" % (type(error).__name__, error)
+            raise JcdException(
+                "Database error checking if table [%s] exists" % name)
 
 # settings table
-class SettingsDAO:
+class SettingsDAO(object):
 
     TableName = "settings"
 
@@ -103,43 +105,49 @@ class SettingsDAO:
         print "Creating table [%s]" % self.TableName
         try:
             self._database.connection.execute(
-                '''CREATE TABLE %s(
+                '''
+                CREATE TABLE %s (
                     name TEXT PRIMARY KEY NOT NULL,
                     value, -- no type, use affinity
-                    last_modification INTEGER NOT NULL
-                )''' % self.TableName)
-        except sqlite3.Error as e:
-            print "%s: %s" % (type(e).__name__, e)
-            raise JcdException("Database error while creating table [%s]" % self.TableName)
+                    last_modification INTEGER NOT NULL)
+                ''' % self.TableName)
+        except sqlite3.Error as error:
+            print "%s: %s" % (type(error).__name__, error)
+            raise JcdException(
+                "Database error while creating table [%s]" % self.TableName)
 
     def setParameter(self, name, value):
         try:
             self._database.connection.execute(
-                '''INSERT OR REPLACE INTO
-                    %s(name,value,last_modification)
-                    VALUES(?,?, strftime('%%s', 'now'))
-                ''' % self.TableName, (name,value))
-        except sqlite3.Error as e:
-            print "%s: %s" % (type(e).__name__, e)
-            raise JcdException("Database error while setting parameter [%s]" % name)
+                '''
+                INSERT OR REPLACE INTO %s (name, value, last_modification)
+                VALUES (?, ?, strftime('%%s', 'now'))
+                ''' % self.TableName, (name, value))
+        except sqlite3.Error as error:
+            print "%s: %s" % (type(error).__name__, error)
+            raise JcdException(
+                "Database error while setting parameter [%s]" % name)
 
     def getParameter(self, name):
         try:
             results = self._database.connection.execute(
-                '''SELECT value, datetime(last_modification,'unixepoch')
-                    FROM %s
-                    WHERE name = ?
-                ''' % self.TableName, (name,))
-            r = results.fetchone()
-            if r is None:
+                '''
+                SELECT value,
+                    datetime(last_modification, 'unixepoch') as modified_stamp
+                FROM %s
+                WHERE name = ?
+                ''' % self.TableName, (name, ))
+            result = results.fetchone()
+            if result is None:
                 return (None, None)
-            return r
-        except sqlite3.Error as e:
-            print "%s: %s" % (type(e).__name__, e)
-            raise JcdException("Database error while fetching parameter [%s]" % name)
+            return result
+        except sqlite3.Error as error:
+            print "%s: %s" % (type(error).__name__, error)
+            raise JcdException(
+                "Database error while fetching parameter [%s]" % name)
 
 # contract table
-class ContractsDAO:
+class ContractsDAO(object):
 
     TableName = "contracts"
 
@@ -150,17 +158,19 @@ class ContractsDAO:
         print "Creating table [%s]" % self.TableName
         try:
             self._database.connection.execute(
-                '''CREATE TABLE %s(
-                contract_id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-                timestamp INTEGER NOT NULL,
-                contract_name TEXT UNIQUE NOT NULL,
-                commercial_name TEXT NOT NULL,
-                country_code TEXT NOT NULL,
-                cities TEXT NOT NULL
-                )''' % self.TableName)
-        except sqlite3.Error as e:
-            print "%s: %s" % (type(e).__name__, e)
-            raise JcdException("Database error while creating table [%s]" % self.TableName)
+                '''
+                CREATE TABLE %s (
+                    contract_id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    timestamp INTEGER NOT NULL,
+                    contract_name TEXT UNIQUE NOT NULL,
+                    commercial_name TEXT NOT NULL,
+                    country_code TEXT NOT NULL,
+                    cities TEXT NOT NULL)
+                ''' % self.TableName)
+        except sqlite3.Error as error:
+            print "%s: %s" % (type(error).__name__, error)
+            raise JcdException(
+                "Database error while creating table [%s]" % self.TableName)
 
     def storeContracts(self, json, timestamp):
         # merge cities together
@@ -170,27 +180,40 @@ class ContractsDAO:
         try:
             # update any existing contracts
             self._database.connection.executemany(
-                '''UPDATE OR IGNORE %s SET
-                    timestamp = :timestamp,
+                '''
+                UPDATE OR IGNORE %s
+                SET timestamp = :timestamp,
                     commercial_name = :commercial_name,
                     country_code = :country_code,
                     cities = :cities
-                    WHERE contract_name = :name
+                WHERE contract_name = :name
                 ''' % self.TableName, json)
             # add possible new contracts
             req = self._database.connection.executemany(
-                '''INSERT OR IGNORE INTO
-                    %s(contract_id,timestamp,contract_name,commercial_name,country_code,cities)
-                    VALUES(NULL,:timestamp,:name,:commercial_name,:country_code,:cities)
+                '''
+                INSERT OR IGNORE INTO %s (
+                    contract_id,
+                    timestamp,
+                    contract_name,
+                    commercial_name,
+                    country_code,
+                    cities)
+                VALUES (
+                    NULL,
+                    :timestamp,
+                    :name,
+                    :commercial_name,
+                    :country_code,
+                    :cities)
                 ''' % self.TableName, json)
             # return number of inserted records
             return req.rowcount
-        except sqlite3.Error as e:
-            print "%s: %s" % (type(e).__name__, e)
+        except sqlite3.Error as error:
+            print "%s: %s" % (type(error).__name__, error)
             raise JcdException("Database error while inserting contracts")
 
 # settings table
-class FullSamplesDAO:
+class FullSamplesDAO(object):
 
     TableNameNew = "new_samples"
     TableNameOld = "old_samples"
@@ -206,25 +229,27 @@ class FullSamplesDAO:
         print "Creating table [%s]" % tableName
         try:
             self._database.connection.execute(
-                '''CREATE TABLE %s(
-                timestamp INTEGER NOT NULL,
-                contract_id INTEGER NOT NULL,
-                station_number INTEGR NOT NULL,
-                available_bikes INTEGER NOT NULL,
-                available_bike_stands INTEGER NOT NULL,
-                status INTEGER NOT NULL,
-                bike_stands INTEGER NOT NULL,
-                bonus INTEGER NOT NULL,
-                banking INTEGER NOT NULL,
-                position TEXT NOT NULL,
-                address TEXT NOT NULL,
-                station_name TEXT NOT NULL,
-                last_update INTEGER,
-                PRIMARY KEY (contract_id, station_number)
-                )''' % tableName)
-        except sqlite3.Error as e:
-            print "%s: %s" % (type(e).__name__, e)
-            raise JcdException("Database error while creating table [%s]" % tableName)
+                '''
+                CREATE TABLE %s (
+                    timestamp INTEGER NOT NULL,
+                    contract_id INTEGER NOT NULL,
+                    station_number INTEGR NOT NULL,
+                    available_bikes INTEGER NOT NULL,
+                    available_bike_stands INTEGER NOT NULL,
+                    status INTEGER NOT NULL,
+                    bike_stands INTEGER NOT NULL,
+                    bonus INTEGER NOT NULL,
+                    banking INTEGER NOT NULL,
+                    position TEXT NOT NULL,
+                    address TEXT NOT NULL,
+                    station_name TEXT NOT NULL,
+                    last_update INTEGER,
+                    PRIMARY KEY (contract_id, station_number))
+                ''' % tableName)
+        except sqlite3.Error as error:
+            print "%s: %s" % (type(error).__name__, error)
+            raise JcdException(
+                "Database error while creating table [%s]" % tableName)
 
     def storeNewSamples(self, json, timestamp):
         # adapt json to database schema
@@ -233,41 +258,63 @@ class FullSamplesDAO:
             station["status"] = 1 if station["status"] == "OPEN" else 0
             station["bonus"] = 1 if station["bonus"] == True else 0
             station["banking"] = 1 if station["banking"] == True else 0
-            station["position"] = "/".join(map(str,station["position"].values()))
+            station["position"] = "/".join(
+                str(v) for v in station["position"].values())
         try:
             # insert station data
-            req = self._database.connection.executemany(
-                '''INSERT OR REPLACE INTO %s(timestamp,
-                    contract_id, station_number, available_bikes,
-                    available_bike_stands, status, bike_stands,
-                    bonus, banking, position, address,
-                    station_name, last_update)
-                    VALUES(:timestamp, (SELECT contract_id FROM %s
+            self._database.connection.executemany(
+                '''
+                INSERT OR REPLACE INTO %s (
+                    timestamp,
+                    contract_id,
+                    station_number,
+                    available_bikes,
+                    available_bike_stands,
+                    status,
+                    bike_stands,
+                    bonus,
+                    banking,
+                    position,
+                    address,
+                    station_name,
+                    last_update)
+                VALUES (
+                    :timestamp,
+                    (SELECT contract_id FROM %s
                         WHERE contract_name = :contract_name),
-                    :number, :available_bikes,
-                    :available_bike_stands, :status, :bike_stands,
-                    :bonus, :banking, :position, :address,
-                    :name, :last_update)
+                    :number,
+                    :available_bikes,
+                    :available_bike_stands,
+                    :status,
+                    :bike_stands,
+                    :bonus,
+                    :banking,
+                    :position,
+                    :address,
+                    :name,
+                    :last_update)
                 ''' % (self.TableNameNew, ContractsDAO.TableName), json)
-        except sqlite3.Error as e:
-            print "%s: %s" % (type(e).__name__, e)
+        except sqlite3.Error as error:
+            print "%s: %s" % (type(error).__name__, error)
             raise JcdException("Database error while inserting state")
 
     def moveNewSamplesIntoOld(self):
         try:
             self._database.connection.execute(
-                '''INSERT OR REPLACE INTO %s
-                    SELECT * FROM %s
+                '''
+                INSERT OR REPLACE INTO %s
+                SELECT * FROM %s
                 ''' % (self.TableNameOld, self.TableNameNew))
             self._database.connection.execute(
-                '''DELETE FROM %s
+                '''
+                DELETE FROM %s
                 ''' % self.TableNameNew)
-        except sqlite3.Error as e:
-            print "%s: %s" % (type(e).__name__, e)
+        except sqlite3.Error as error:
+            print "%s: %s" % (type(error).__name__, error)
             raise JcdException("Database error moving new samples into old")
 
 # stored sample DAO
-class ShortSamplesDAO:
+class ShortSamplesDAO(object):
 
     TableNameChanged = "changed_samples"
     TableNameArchive = "archived_samples"
@@ -275,32 +322,36 @@ class ShortSamplesDAO:
     def __init__(self, database):
         self._database = database
 
-    def _createTable(self, db, tableName):
+    def _createTable(self, database, tableName):
         try:
-            db.connection.execute(
-                '''CREATE TABLE %s(
-                timestamp INTEGER NOT NULL,
-                contract_id INTEGER NOT NULL,
-                station_number INTEGR NOT NULL,
-                available_bikes INTEGER NOT NULL,
-                available_bike_stands INTEGER NOT NULL,
-                PRIMARY KEY (contract_id, station_number)
-                )''' % tableName)
-        except sqlite3.Error as e:
-            print "%s: %s" % (type(e).__name__, e)
-            raise JcdException("Database error while creating table [%s]" % tableName)
+            database.connection.execute(
+                '''
+                CREATE TABLE %s (
+                    timestamp INTEGER NOT NULL,
+                    contract_id INTEGER NOT NULL,
+                    station_number INTEGR NOT NULL,
+                    available_bikes INTEGER NOT NULL,
+                    available_bike_stands INTEGER NOT NULL,
+                    PRIMARY KEY (contract_id, station_number))
+                ''' % tableName)
+        except sqlite3.Error as error:
+            print "%s: %s" % (type(error).__name__, error)
+            raise JcdException(
+                "Database error while creating table [%s]" % tableName)
 
     def createTableChanged(self):
         print "Creating table [%s]" % self.TableNameChanged
-        self._createTable(self._database,self.TableNameChanged)
+        self._createTable(self._database, self.TableNameChanged)
 
     def buildChangedSamples(self):
         try:
             self._database.connection.execute(
-                '''DELETE FROM %s
+                '''
+                DELETE FROM %s
                 ''' % self.TableNameChanged)
             req = self._database.connection.execute(
-                '''INSERT INTO %s
+                '''
+                INSERT INTO %s
                 SELECT new.timestamp,
                     new.contract_id,
                     new.station_number,
@@ -318,22 +369,25 @@ class ShortSamplesDAO:
                     FullSamplesDAO.TableNameOld))
             # return number of inserted records
             return req.rowcount
-        except sqlite3.Error as e:
-            print "%s: %s" % (type(e).__name__, e)
+        except sqlite3.Error as error:
+            print "%s: %s" % (type(error).__name__, error)
             raise JcdException("Database error building changed samples")
 
     def getChangedStatistics(self):
         try:
             req = self._database.connection.execute(
-                '''SELECT STRFTIME('%%Y_%%m_%%d',DATE(timestamp,'unixepoch')) AS day,
-                    COUNT(timestamp) as num_changed_samples
-                    FROM %s
-                    GROUP BY day
-                    ORDER BY day ASC
+                '''
+                SELECT
+                    STRFTIME('%%Y_%%m_%%d',
+                        DATE(timestamp, 'unixepoch')) AS day,
+                    COUNT(timestamp) AS num_changed_samples
+                FROM %s
+                GROUP BY day
+                ORDER BY day ASC
                 ''' % self.TableNameChanged)
             return req.fetchall()
-        except sqlite3.Error as e:
-            print "%s: %s" % (type(e).__name__, e)
+        except sqlite3.Error as error:
+            print "%s: %s" % (type(error).__name__, error)
             raise JcdException("Database error getting changed date list")
 
     def getDateDbName(self, date):
@@ -343,12 +397,12 @@ class ShortSamplesDAO:
         dbname = self.getDateDbName(date)
         with SqliteDB(dbname) as storage_db:
             if not storage_db.hasTable(self.TableNameArchive):
-                self._createTable(storage_db,self.TableNameArchive)
+                self._createTable(storage_db, self.TableNameArchive)
                 return True
         return False
 
 # access jcdecaux web api
-class ApiAccess:
+class ApiAccess(object):
 
     BaseUrl = "https://api.jcdecaux.com/vls/v1"
 
@@ -356,45 +410,52 @@ class ApiAccess:
         self._apikey = apikey
 
     def _parseReply(self, reply_text):
-	reply_json = json.loads(reply_text)
-	if type(reply_json) is dict and reply_json.has_key("error"):
+        reply_json = json.loads(reply_text)
+        if type(reply_json) is dict and reply_json.has_key("error"):
             error = reply_json["error"]
             # Test for invalid API key
             if error == "Unauthorized":
                 # TODO: disable fetch
                 pass
-            raise JcdException("JCDecaux API exception: %s" % reply_json["error"])
+            raise JcdException(
+                "JCDecaux API exception: %s" % reply_json["error"])
         return reply_json
 
-    def _get(self, sub_url, payload = {}):
+    def _get(self, sub_url, payload=None):
+        if payload is None:
+            payload = {}
         # add the api key to the call
         payload["apiKey"] = self._apikey
         url = "%s/%s" % (self.BaseUrl, sub_url)
-        headers = { "Accept": "application/json" }
+        headers = {"Accept": "application/json"}
         try:
-            r = requests.get(url, params=payload, headers=headers)
+            request = requests.get(url, params=payload, headers=headers)
             # avoid ultra-slow character set auto-detection
             # see https://github.com/kennethreitz/requests/issues/2359
-            r.encoding = "utf-8"
+            request.encoding = "utf-8"
             # check for api error
-            return self._parseReply(r.text)
-        except requests.exceptions.RequestException as e:
-            raise JcdException("JCDecaux Requests exception: (%s) %s" % (type(e).__name__, e))
+            return self._parseReply(request.text)
+        except requests.exceptions.RequestException as exception:
+            raise JcdException(
+                "JCDecaux Requests exception: (%s) %s" % (
+                    type(exception).__name__, exception))
 
     def getStations(self):
         return self._get("stations")
 
-    def getContractStation(self,contract_name,station_id):
-        return self._get("stations/%i" % station_id, {"contract": contract_name})
+    def getContractStation(self, contract_name, station_id):
+        return self._get("stations/%i" % station_id,
+            {"contract": contract_name})
 
-    def getContractStations(self,contract_name):
-        return self._get("stations", {"contract": contract_name})
+    def getContractStations(self, contract_name):
+        return self._get("stations",
+            {"contract": contract_name})
 
     def getContracts(self):
         return self._get("contracts")
 
 # initialize application data
-class InitCmd:
+class InitCmd(object):
 
     def __init__(self, args):
         self._args = args
@@ -404,12 +465,12 @@ class InitCmd:
         try:
             print "Removing folder [%s] and its content" % App.DataPath
             shutil.rmtree(App.DataPath)
-        except OSError as e:
+        except OSError as error:
             # silently ignore "absent directory"
-            if e.errno == errno.ENOENT:
+            if error.errno == errno.ENOENT:
                 return
             # on other errors
-            raise JcdException("Could not remove folder : %s" % e)
+            raise JcdException("Could not remove folder : %s" % error)
 
     def _createFolder(self):
         try:
@@ -425,26 +486,27 @@ class InitCmd:
             raise
 
     def _createTables(self):
-        with SqliteDB(App.DbName) as db:
-            settings = SettingsDAO(db)
+        with SqliteDB(App.DbName) as app_db:
+            settings = SettingsDAO(app_db)
             settings.createTable()
-            contracts = ContractsDAO(db)
+            contracts = ContractsDAO(app_db)
             contracts.createTable()
-            full_samples = FullSamplesDAO(db)
+            full_samples = FullSamplesDAO(app_db)
             full_samples.createTables()
-            short_samples = ShortSamplesDAO(db)
+            short_samples = ShortSamplesDAO(app_db)
             short_samples.createTableChanged()
 
     # set default parameters
     def setDefaultParameters(self):
-        with SqliteDB(App.DbName) as db:
-            settings = SettingsDAO(db)
+        with SqliteDB(App.DbName) as app_db:
+            settings = SettingsDAO(app_db)
             for value in ConfigCmd.Parameters:
                 if value[3] is not None:
-                    print "Setting parameter [%s] to default value [%s]" % (value[0],value[3])
+                    print "Setting parameter [%s] to default value [%s]" % (
+                        value[0], value[3])
                     settings.setParameter(value[0], value[3])
             # if all went well
-            db.commit()
+            app_db.commit()
 
     def run(self):
         # remove folder if creation is forced
@@ -456,7 +518,7 @@ class InitCmd:
         self.setDefaultParameters()
 
 # configure settings:
-class ConfigCmd:
+class ConfigCmd(object):
 
     Parameters = (
         ('apikey', str, 'JCDecaux API key', None),
@@ -467,19 +529,20 @@ class ConfigCmd:
     def __init__(self, args):
         self._args = args
 
-    def displayParam(self,param):
-        with SqliteDB(App.DbName) as db:
-            settings = SettingsDAO(db)
+    def displayParam(self, param):
+        with SqliteDB(App.DbName) as app_db:
+            settings = SettingsDAO(app_db)
             (value, last_modification) = settings.getParameter(param)
-            print "%s = %s (last modified on %s)" % (param, value, last_modification)
+            print "%s = %s (last modified on %s)" % (
+                param, value, last_modification)
 
-    def updateParam(self,param,value):
-        with SqliteDB(App.DbName) as db:
-            settings = SettingsDAO(db)
-            settings.setParameter(param,value)
+    def updateParam(self, param, value):
+        with SqliteDB(App.DbName) as app_db:
+            settings = SettingsDAO(app_db)
+            settings.setParameter(param, value)
             # if all went well
-            db.commit()
-            print "Setting %s = %s" % (param,value)
+            app_db.commit()
+            print "Setting %s = %s" % (param, value)
 
     def run(self):
         # modify each fully provided parameter
@@ -490,7 +553,7 @@ class ConfigCmd:
             if param in args_dict:
                 value = args_dict[param]
                 if value is not None:
-                    self.updateParam(param,value)
+                    self.updateParam(param, value)
                     has_modified = True
         # if nothing was provided, display all current parameter value
         if not has_modified:
@@ -498,7 +561,7 @@ class ConfigCmd:
                 self.displayParam(value[0])
 
 # administration
-class AdminCmd:
+class AdminCmd(object):
 
     Parameters = (
         ('vacuum', 'defragment and trim sqlite database'),
@@ -510,15 +573,15 @@ class AdminCmd:
 
     def vacuum(self):
         print "Vacuuming SqliteDB"
-        with SqliteDB(App.DbName) as db:
-            db.vacuum()
+        with SqliteDB(App.DbName) as app_db:
+            app_db.vacuum()
 
     def apitest(self):
         print "Testing JCDecaux API access"
-        with SqliteDB(App.DbName) as db:
+        with SqliteDB(App.DbName) as app_db:
             # fetch api key
-            settings = SettingsDAO(db)
-            apikey, last_modified = settings.getParameter("apikey")
+            settings = SettingsDAO(app_db)
+            apikey = settings.getParameter("apikey")
             if apikey is None:
                 raise JcdException(
                     "API key is not set ! "
@@ -528,22 +591,22 @@ class AdminCmd:
             # get all available contracts
             print "Searching contracts ..."
             contracts = api.getContracts()
-            c = len(contracts)
-            print "Found %i contracts." % c
+            count = len(contracts)
+            print "Found %i contracts." % count
             # get a random contract
-            r = random.randint(0,c-1)
-            contract = contracts[r]
-            cn = contract["name"]
-            print "Fetching stations contract [%s] ..." % cn
-            stations = api.getContractStations(cn)
-            c = len(stations)
-            print "Found %i stations." % c
+            rnd = random.randint(0, count-1)
+            contract = contracts[rnd]
+            print "Fetching stations contract [%s] ..." % contract["name"]
+            stations = api.getContractStations(contract["name"])
+            count = len(stations)
+            print "Found %i stations." % count
             # get a random contract
-            r = random.randint(0,c-1)
-            station = stations[r]
-            sn = station["number"]
-            print "Fetching a single station [%i] of contract [%s] ..." % (sn,cn)
-            station = api.getContractStation(cn,sn)
+            rnd = random.randint(0, count-1)
+            station = stations[rnd]
+            print "Fetching a single station [%i] of contract [%s] ..." % (
+                station["number"], contract["name"])
+            station = api.getContractStation(
+                contract["name"], station["number"])
             print "Station name is [%s]" % station["name"]
             # test OK
             print "API TEST SUCCESS"
@@ -555,87 +618,89 @@ class AdminCmd:
             if name in args_dict:
                 value = args_dict[name]
                 if type(value) == bool and value:
-                    f = getattr(self, name)
-                    f()
+                    function = getattr(self, name)
+                    function()
 
 # fetch information from api:
-class FetchCmd:
+class FetchCmd(object):
 
     def __init__(self, args):
         self._args = args
         self._timestamp = int(time.time())
 
-    def _fetchContracts(self):
-        with SqliteDB(App.DbName) as db:
+    def fetchContracts(self):
+        with SqliteDB(App.DbName) as app_db:
             # fetch api key
-            settings = SettingsDAO(db)
-            apikey, last_modified = settings.getParameter("apikey")
+            settings = SettingsDAO(app_db)
+            apikey = settings.getParameter("apikey")
             if apikey is None:
                 raise JcdException(
                     "API key is not set ! "
                     "Please configure using 'config --apikey'")
             # get all available contracts
             api = ApiAccess(apikey)
-            json = api.getContracts()
-            dao = ContractsDAO(db)
-            new_contracts_count = dao.storeContracts(json,self._timestamp)
+            json_contracts = api.getContracts()
+            dao = ContractsDAO(app_db)
+            new_contracts_count = dao.storeContracts(
+                json_contracts, self._timestamp)
             # if everything went fine
-            db.commit()
+            app_db.commit()
             if new_contracts_count > 0 and App.Verbose:
                 print "New contracts added: %i" % new_contracts_count
 
-    def _fetchState(self):
-        with SqliteDB(App.DbName) as db:
+    def fetchState(self):
+        with SqliteDB(App.DbName) as app_db:
             # fetch api key
-            settings = SettingsDAO(db)
-            apikey, last_modified = settings.getParameter("apikey")
+            settings = SettingsDAO(app_db)
+            apikey = settings.getParameter("apikey")
             if apikey is None:
                 raise JcdException(
                     "API key is not set ! "
                     "Please configure using 'config --apikey'")
             # get all station states
             api = ApiAccess(apikey)
-            json = api.getStations()
-            dao = FullSamplesDAO(db)
-            dao.storeNewSamples(json,self._timestamp)
+            json_stations = api.getStations()
+            dao = FullSamplesDAO(app_db)
+            dao.storeNewSamples(json_stations, self._timestamp)
             # if everything went fine
-            db.commit()
+            app_db.commit()
 
     def run(self):
         if self._args.contracts:
-            self._fetchContracts()
+            self.fetchContracts()
         if self._args.state:
-            self._fetchState()
+            self.fetchState()
 
 # store state into database:
-class StoreCmd:
+class StoreCmd(object):
 
     def __init__(self, args):
         self._args = args
 
     def run(self):
-        with SqliteDB(App.DbName) as db:
+        with SqliteDB(App.DbName) as app_db:
             # analyse changes
-            short_dao = ShortSamplesDAO(db)
+            short_dao = ShortSamplesDAO(app_db)
             num_changed_samples = short_dao.buildChangedSamples()
             # prepare archive storage if needed
             stats = short_dao.getChangedStatistics()
             for date, count in stats:
                 created = short_dao.initializeDateDb(date)
                 if created and App.Verbose:
-                    print "Creating archive database for date [%s]" % date
+                    print "Creating database for date [%s] for %i samples" % (
+                        date, count)
             # TODO: attach date databases to main databases
             # TODO: move samples around
             # cleanup and do age samples
-            full_dao = FullSamplesDAO(db)
+            full_dao = FullSamplesDAO(app_db)
             full_dao.moveNewSamplesIntoOld()
             # if everything went fine
-            db.commit()
+            app_db.commit()
             if num_changed_samples > 0 and App.Verbose:
                 print "Changed samples: %i" % num_changed_samples
 
 # main app
-class App:
+class App(object):
 
     DataPath = None
     DbName = None
@@ -647,81 +712,82 @@ class App:
         # store main dbname
         self._default_app_dbname = default_app_dbname
         # top parser
-        self._parser = argparse.ArgumentParser(description = 'Fetch and store JCDecaux API results')
+        self._parser = argparse.ArgumentParser(
+            description='Fetch and store JCDecaux API results')
         # top level argument for data destination
         self._parser.add_argument(
             '--datadir',
-            help = 'choose data folder (default: %s)' % default_data_path,
-            default = default_data_path
+            help='choose data folder (default: %s)' % default_data_path,
+            default=default_data_path
         )
         self._parser.add_argument(
             '--dbname',
-            help = 'choose db filename (default: %s)' % default_app_dbname,
-            default = default_app_dbname
+            help='choose db filename (default: %s)' % default_app_dbname,
+            default=default_app_dbname
         )
         self._parser.add_argument(
             '--verbose', '-v',
-            action = 'store_true',
-            help = 'display operationnal informations'
+            action='store_true',
+            help='display operationnal informations'
         )
         # top level commands
         top_command = self._parser.add_subparsers(dest='command')
         # init command
         init = top_command.add_parser(
             'init',
-            help = 'create application files',
-            description = 'Initialize application'
+            help='create application files',
+            description='Initialize application'
         )
         init.add_argument(
             '--force', '-f',
-            action = 'store_true',
-            help = 'overwrite existing files'
+            action='store_true',
+            help='overwrite existing files'
         )
         # config command
         config = top_command.add_parser(
             'config',
-            help = 'config application parameters',
-            description = 'Configure application'
+            help='config application parameters',
+            description='Configure application'
         )
         for value in ConfigCmd.Parameters:
             config.add_argument(
                 '--%s' % value[0],
-                type = value[1],
-                help = value[2],
+                type=value[1],
+                help=value[2],
             )
         # admin command
         admin = top_command.add_parser(
             'admin',
-            help = 'administrate application database',
-            description = 'Manage database'
+            help='administrate application database',
+            description='Manage database'
         )
         for value in AdminCmd.Parameters:
             admin.add_argument(
                 '--%s' % value[0],
-                action = 'store_true',
-                help = value[1],
+                action='store_true',
+                help=value[1],
             )
         # fetch command
         fetch = top_command.add_parser(
             'fetch',
-            help = 'get information from the API',
-            description = 'Get from API'
+            help='get information from the API',
+            description='Get from API'
         )
         fetch.add_argument(
             '--contracts', '-c',
-            action = 'store_true',
-            help = 'get contracts'
+            action='store_true',
+            help='get contracts'
         )
         fetch.add_argument(
             '--state', '-s',
-            action = 'store_true',
-            help = 'get current state'
+            action='store_true',
+            help='get current state'
         )
         # store command
-        store = top_command.add_parser(
+        top_command.add_parser(
             'store',
-            help = 'store fetched state into database',
-            description = 'Store state in database'
+            help='store fetched state into database',
+            description='Store state in database'
         )
 
     def run(self):
@@ -742,8 +808,8 @@ class App:
             del args.command
             # run requested command
             command(args)
-        except JcdException as e:
-            print e
+        except JcdException as exception:
+            print exception
             sys.exit(1)
 
     def init(self, args):
@@ -767,7 +833,7 @@ class App:
         store.run()
 # main
 if __name__ == '__main__':
-    app = App("~/.jcd","app.db")
+    app = App("~/.jcd", "app.db")
     try:
         app.run()
     except KeyboardInterrupt:
