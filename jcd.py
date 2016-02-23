@@ -48,12 +48,15 @@ class SqliteDB(object):
         self._db_path = os.path.normpath(
             "%s/%s" % (App.DataPath, self._db_filename))
         self.connection = None
+        self._att_databases = {}
 
     def open(self):
         if self.connection is None:
             self.connection = sqlite3.connect(self._db_path)
 
     def close(self):
+        self._detachAllDatabases()
+        # close main databases
         if self.connection is not None:
             self.connection.close()
         self.connection = None
@@ -92,6 +95,42 @@ class SqliteDB(object):
             print "%s: %s" % (type(error).__name__, error)
             raise JcdException(
                 "Database error checking if table [%s] exists" % name)
+
+    def attachDatabase(self, file_name, schema_name):
+        if schema_name in self._att_databases:
+            raise JcdException(
+                "Database is already attached as schema [%s]" % schema_name)
+        try:
+            self.connection.execute(
+                '''
+                ATTACH DATABASE ? AS ?
+                ''', (file_name, schema_name))
+            # memorize attachement
+            self._att_databases[schema_name] = file_name
+        except sqlite3.Error as error:
+            print "%s: %s" % (type(error).__name__, error)
+            raise JcdException(
+                "Database error while attaching [%s] as schema [%s]" % (
+                    file_name, schema_name))
+
+    def detachDatabase(self,schema_name):
+        if schema_name not in self._att_databases:
+            raise JcdException(
+                "Schema [%s] is not attached" % schema_name)
+        try:
+            self.connection.execute(
+                '''
+                DETACH DATABASE ?
+                ''', (schema_name, ))
+            del self._att_databases[schema_name]
+        except sqlite3.Error as error:
+            print "%s: %s" % (type(error).__name__, error)
+            raise JcdException(
+                "Database error while detaching [%s]" % (schema_name, ))
+
+    def _detachAllDatabases(self):
+        for schema in self._att_databases.keys():
+            self.detachDatabase(schema)
 
 # settings table
 class SettingsDAO(object):
