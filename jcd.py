@@ -324,7 +324,7 @@ class ShortSamplesDAO:
     def getChangedStatistics(self):
         try:
             req = self._database.connection.execute(
-                '''SELECT DATE(timestamp,'unixepoch') AS day,
+                '''SELECT STRFTIME('%%Y_%%m_%%d',DATE(timestamp,'unixepoch')) AS day,
                     COUNT(timestamp) as num_changed_samples
                     FROM %s
                     GROUP BY day
@@ -336,7 +336,7 @@ class ShortSamplesDAO:
             raise JcdException("Database error getting changed date list")
 
     def getDateDbName(self, date):
-        return "samples-%s.db" % date
+        return "samples_%s.db" % date
 
     def initializeDateDb(self, date):
         dbname = self.getDateDbName(date)
