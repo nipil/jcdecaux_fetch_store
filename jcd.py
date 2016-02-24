@@ -156,7 +156,8 @@ class SettingsDAO(object):
         self._database = database
 
     def createTable(self):
-        print "Creating table [%s]" % self.TableName
+        if App.Verbose:
+            print "Creating table [%s]" % self.TableName
         try:
             self._database.connection.execute(
                 '''
@@ -209,7 +210,8 @@ class ContractsDAO(object):
         self._database = database
 
     def createTable(self):
-        print "Creating table [%s]" % self.TableName
+        if App.Verbose:
+            print "Creating table [%s]" % self.TableName
         try:
             self._database.connection.execute(
                 '''
@@ -280,7 +282,8 @@ class FullSamplesDAO(object):
         self._createTable(self.TableNameOld)
 
     def _createTable(self, tableName):
-        print "Creating table [%s]" % tableName
+        if App.Verbose:
+            print "Creating table [%s]" % tableName
         try:
             self._database.connection.execute(
                 '''
@@ -415,7 +418,8 @@ class ShortSamplesDAO(object):
                 "Database error while creating table [%s]" % tableName)
 
     def createTableChanged(self):
-        print "Creating table [%s]" % self.TableNameChanged
+        if App.Verbose:
+            print "Creating table [%s]" % self.TableNameChanged
         self._createTable(self._database, self.TableNameChanged)
 
     def buildChangedSamples(self):
@@ -573,7 +577,8 @@ class InitCmd(object):
     def _removeFolder(self):
         # delete the folder
         try:
-            print "Removing folder [%s] and its content" % App.DataPath
+            if App.Verbose:
+                print "Removing folder [%s] and its content" % App.DataPath
             shutil.rmtree(App.DataPath)
         except OSError as error:
             # silently ignore "absent directory"
@@ -584,7 +589,8 @@ class InitCmd(object):
 
     def _createFolder(self):
         try:
-            print "Creating folder [%s]" % App.DataPath
+            if App.Verbose:
+                print "Creating folder [%s]" % App.DataPath
             os.makedirs(App.DataPath)
         except OSError as exception:
             # folder exists
@@ -611,7 +617,7 @@ class InitCmd(object):
         with SqliteDB(App.DbName) as app_db:
             settings = SettingsDAO(app_db)
             for value in ConfigCmd.Parameters:
-                if value[3] is not None:
+                if App.Verbose and value[3] is not None:
                     print "Setting parameter [%s] to default value [%s]" % (
                         value[0], value[3])
                     settings.setParameter(value[0], value[3])
@@ -643,6 +649,7 @@ class ConfigCmd(object):
         with SqliteDB(App.DbName) as app_db:
             settings = SettingsDAO(app_db)
             (value, last_modification) = settings.getParameter(param)
+            # don't check for verbose, display is mandatory
             print "%s = %s (last modified on %s)" % (
                 param, value, last_modification)
 
@@ -652,7 +659,8 @@ class ConfigCmd(object):
             settings.setParameter(param, value)
             # if all went well
             app_db.commit()
-            print "Setting %s = %s" % (param, value)
+            if App.Verbose:
+                print "Setting %s = %s" % (param, value)
 
     def run(self):
         # modify each fully provided parameter
@@ -682,12 +690,14 @@ class AdminCmd(object):
         self._args = args
 
     def vacuum(self):
-        print "Vacuuming SqliteDB"
+        if App.Verbose:
+            print "Vacuuming SqliteDB"
         with SqliteDB(App.DbName) as app_db:
             app_db.vacuum()
 
     def apitest(self):
-        print "Testing JCDecaux API access"
+        if App.Verbose:
+            print "Testing JCDecaux API access"
         with SqliteDB(App.DbName) as app_db:
             # fetch api key
             settings = SettingsDAO(app_db)
@@ -699,27 +709,34 @@ class AdminCmd(object):
             # real testing
             api = ApiAccess(apikey)
             # get all available contracts
-            print "Searching contracts ..."
+            if App.Verbose:
+                print "Searching contracts ..."
             contracts = api.getContracts()
             count = len(contracts)
-            print "Found %i contracts." % count
+            if App.Verbose:
+                print "Found %i contracts." % count
             # get a random contract
             rnd = random.randint(0, count-1)
             contract = contracts[rnd]
-            print "Fetching stations contract [%s] ..." % contract["name"]
+            if App.Verbose:
+                print "Fetching stations contract [%s] ..." % contract["name"]
             stations = api.getContractStations(contract["name"])
             count = len(stations)
-            print "Found %i stations." % count
+            if App.Verbose:
+                print "Found %i stations." % count
             # get a random contract
             rnd = random.randint(0, count-1)
             station = stations[rnd]
-            print "Fetching a single station [%i] of contract [%s] ..." % (
+            if App.Verbose:
+                print "Fetching a single station [%i] of contract [%s] ..." % (
                 station["number"], contract["name"])
             station = api.getContractStation(
                 contract["name"], station["number"])
-            print "Station name is [%s]" % station["name"]
+            if App.Verbose:
+                print "Station name is [%s]" % station["name"]
             # test OK
-            print "API TEST SUCCESS"
+            if App.Verbose:
+                print "API TEST SUCCESS"
 
     def run(self):
         args_dict = self._args.__dict__
@@ -755,7 +772,7 @@ class FetchCmd(object):
                 json_contracts, self._timestamp)
             # if everything went fine
             app_db.commit()
-            if new_contracts_count > 0 and App.Verbose:
+            if App.Verbose:
                 print "New contracts added: %i" % new_contracts_count
 
     def fetchState(self):
@@ -773,11 +790,11 @@ class FetchCmd(object):
             api = ApiAccess(apikey)
             json_stations = api.getStations()
             num_new = full_dao.storeNewSamples(json_stations, self._timestamp)
-            if num_new > 0 and App.Verbose:
+            if App.Verbose:
                 print "New samples acquired: %i" % num_new
             # analyse changes
             num_changed = short_dao.buildChangedSamples()
-            if num_changed > 0 and App.Verbose:
+            if App.Verbose:
                 print "Changed samples available for archive: %i" % num_changed
             # if everything went fine
             app_db.commit()
@@ -806,7 +823,7 @@ class StoreCmd(object):
                 db_filename = short_dao.getDbFileName(schemas_name)
                 # prepare archive storage if needed
                 created = short_dao.initializeDateDb(db_filename)
-                if created and App.Verbose:
+                if App.Verbose and created:
                     print "Database [%s] created" % db_filename
                 # WARNING: attaching commits current transaction
                 app_db.attachDatabase(db_filename, schemas_name)
