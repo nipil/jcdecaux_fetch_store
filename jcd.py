@@ -342,20 +342,31 @@ class FullSamplesDAO(object):
 
     def moveNewSamplesIntoOld(self, date):
         try:
-            self._database.connection.execute(
+            req = self._database.connection.execute(
                 '''
                 INSERT OR REPLACE INTO %s
                 SELECT * FROM %s
                 WHERE date(timestamp,'unixepoch') = ?
                 ''' % (self.TableNameOld, self.TableNameNew),
-                date)
-            self._database.connection.execute(
+                (date, ))
+            inserted = req.rowcount
+            req = self._database.connection.execute(
                 '''
                 DELETE FROM %s
-                ''' % self.TableNameNew)
+                WHERE date(timestamp,'unixepoch') = ?
+                ''' % self.TableNameNew,
+                (date, ))
+            deleted = req.rowcount
+            # verify coherence
+            if deleted != inserted:
+                raise JcdException(
+                "Ageing operation failed (%i inserted, %i deleted)" % (
+                    inserted, deleted))
+            # return aged number of records
+            return inserted
         except sqlite3.Error as error:
             print "%s: %s" % (type(error).__name__, error)
-            raise JcdException("Database error moving new samples into old")
+            raise JcdException("Database error ageing new samples into old")
 
 # stored sample DAO
 class ShortSamplesDAO(object):
@@ -456,9 +467,22 @@ class ShortSamplesDAO(object):
                 ''' % (target_schema,
                     self.TableNameArchive,
                     self.TableNameChanged),
-                (date,))
-            # return number of inserted records
-            return req.rowcount
+                (date, ))
+            inserted = req.rowcount
+            req = self._database.connection.execute(
+                '''
+                DELETE FROM %s
+                WHERE date(timestamp,'unixepoch') = ?
+                ''' % self.TableNameChanged,
+                (date, ))
+            deleted = req.rowcount
+            # verify coherence
+            if deleted != inserted:
+                raise JcdException(
+                "Archive operation failed (%i inserted, %i deleted)" % (
+                    inserted, deleted))
+            # return number of archived records
+            return inserted
         except sqlite3.Error as error:
             print "%s: %s" % (type(error).__name__, error)
             raise JcdException(
@@ -743,6 +767,7 @@ class StoreCmd(object):
     def run(self):
         with SqliteDB(App.DbName) as app_db:
             # analyse changes
+            full_dao = FullSamplesDAO(app_db)
             short_dao = ShortSamplesDAO(app_db)
             num_changed = short_dao.buildChangedSamples()
             if num_changed > 0 and App.Verbose:
@@ -761,19 +786,19 @@ class StoreCmd(object):
                 app_db.attachDatabase(db_filename, schemas_name)
                 # moving changed samples to attached db
                 if App.Verbose:
-                    print "Storing %i new samples into %s" % (
+                    print "Archiving %i changed samples into %s" % (
                         count, schemas_name)
-                # archive samples from date
+                # archive changed samples from date
                 num_stored = short_dao.archiveChangedSamples(date, schemas_name)
                 if num_stored != count:
                     raise JcdException(
                         "Not all changed samples could be archived")
+                # age new samples into old
+                num_aged = full_dao.moveNewSamplesIntoOld(date)
                 if App.Verbose:
-                    print "%i samples stored" % num_stored
-                # full_dao = FullSamplesDAO(app_db)
-                # full_dao.moveNewSamplesIntoOld()
-            # if everything went fine
-            # app_db.commit()
+                    print "Aged %i samples for %s" % (num_aged, date)
+                # if everything went fine
+                app_db.commit()
 
 # main app
 class App(object):
