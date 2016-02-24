@@ -525,7 +525,7 @@ class ApiAccess(object):
 
     def _parse_reply(self, reply_text):
         reply_json = json.loads(reply_text)
-        if type(reply_json) is dict and reply_json.has_key("error"):
+        if isinstance(reply_json, dict) and reply_json.has_key("error"):
             error = reply_json["error"]
             # Test for invalid API key
             if error == "Unauthorized":
@@ -744,7 +744,7 @@ class AdminCmd(object):
             name = param[0]
             if name in args_dict:
                 value = args_dict[name]
-                if type(value) == bool and value:
+                if isinstance(value, bool) and value:
                     function = getattr(self, name)
                     function()
 
