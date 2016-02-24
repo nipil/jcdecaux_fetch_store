@@ -58,7 +58,6 @@ class SqliteDB(object):
             self.connection = sqlite3.connect(self._db_path)
 
     def close(self):
-        self._detachAllDatabases()
         # close main databases
         if self.connection is not None:
             self.connection.close()
