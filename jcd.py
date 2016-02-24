@@ -313,8 +313,8 @@ class FullSamplesDAO(object):
         for station in json_content:
             station["timestamp"] = timestamp
             station["status"] = 1 if station["status"] == "OPEN" else 0
-            station["bonus"] = 1 if station["bonus"] == True else 0
-            station["banking"] = 1 if station["banking"] == True else 0
+            station["bonus"] = 1 if station["bonus"] else 0
+            station["banking"] = 1 if station["banking"] else 0
             station["position"] = "/".join(
                 str(v) for v in station["position"].values())
         try:
