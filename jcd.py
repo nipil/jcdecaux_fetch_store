@@ -135,6 +135,18 @@ class SqliteDB(object):
         for schema in self._att_databases.keys():
             self.detachDatabase(schema)
 
+    def getCount(self, target):
+        try:
+            req = self.connection.execute(
+                '''
+                SELECT COUNT(*) FROM %s
+                ''' % target)
+            return req.fetchone()[0]
+        except sqlite3.Error as error:
+            print "%s: %s" % (type(error).__name__, error)
+            raise JcdException(
+                "Database error while getting rowcount for [%s]" % (target, ))
+
 # settings table
 class SettingsDAO(object):
 
@@ -368,6 +380,12 @@ class FullSamplesDAO(object):
             print "%s: %s" % (type(error).__name__, error)
             raise JcdException("Database error ageing new samples into old")
 
+    def getNewCount(self):
+        return self._database.getCount(self.TableNameNew)
+
+    def getOldCount(self):
+        return self._database.getCount(self.TableNameOld)
+
 # stored sample DAO
 class ShortSamplesDAO(object):
 
@@ -487,6 +505,9 @@ class ShortSamplesDAO(object):
             print "%s: %s" % (type(error).__name__, error)
             raise JcdException(
                 "Database error achiving changed samples to %s" % target_schema)
+
+    def getChangedCount(self):
+        return self._database.getCount(self.TableNameChanged)
 
 # access jcdecaux web api
 class ApiAccess(object):
