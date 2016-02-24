@@ -758,8 +758,10 @@ class FetchCmd(object):
 
     def fetchState(self):
         with SqliteDB(App.DbName) as app_db:
-            # fetch api key
             settings = SettingsDAO(app_db)
+            full_dao = FullSamplesDAO(app_db)
+            short_dao = ShortSamplesDAO(app_db)
+            # fetch api key
             apikey = settings.getParameter("apikey")
             if apikey is None:
                 raise JcdException(
@@ -768,8 +770,11 @@ class FetchCmd(object):
             # get all station states
             api = ApiAccess(apikey)
             json_stations = api.getStations()
-            dao = FullSamplesDAO(app_db)
-            dao.storeNewSamples(json_stations, self._timestamp)
+            full_dao.storeNewSamples(json_stations, self._timestamp)
+            # analyse changes
+            num_changed = short_dao.buildChangedSamples()
+            if num_changed > 0 and App.Verbose:
+                print "Available samples for archiving: %i" % num_changed
             # if everything went fine
             app_db.commit()
 
@@ -787,12 +792,8 @@ class StoreCmd(object):
 
     def run(self):
         with SqliteDB(App.DbName) as app_db:
-            # analyse changes
             full_dao = FullSamplesDAO(app_db)
             short_dao = ShortSamplesDAO(app_db)
-            num_changed = short_dao.buildChangedSamples()
-            if num_changed > 0 and App.Verbose:
-                print "Changed samples: %i" % num_changed
             # daily databases are used
             stats = short_dao.getChangedStatistics()
             for date, count in stats:
