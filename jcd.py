@@ -859,7 +859,7 @@ class App(object):
             # run requested command
             command(args)
         except JcdException as exception:
-            print exception
+            print "JcdException: %s" % exception
             sys.exit(1)
 
     def init(self, args):
