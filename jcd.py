@@ -405,7 +405,7 @@ class ShortSamplesDAO(object):
                     station_number INTEGR NOT NULL,
                     available_bikes INTEGER NOT NULL,
                     available_bike_stands INTEGER NOT NULL,
-                    PRIMARY KEY (contract_id, station_number))
+                    PRIMARY KEY (timestamp, contract_id, station_number))
                 ''' % tableName)
         except sqlite3.Error as error:
             print "%s: %s" % (type(error).__name__, error)
