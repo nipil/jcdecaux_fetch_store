@@ -316,7 +316,7 @@ class FullSamplesDAO(object):
                 str(v) for v in station["position"].values())
         try:
             # insert station data
-            self._database.connection.executemany(
+            req = self._database.connection.executemany(
                 '''
                 INSERT OR REPLACE INTO %s (
                     timestamp,
@@ -348,6 +348,8 @@ class FullSamplesDAO(object):
                     :name,
                     :last_update)
                 ''' % (self.TableNameNew, ContractsDAO.TableName), json)
+            # return number of inserted records
+            return req.rowcount
         except sqlite3.Error as error:
             print "%s: %s" % (type(error).__name__, error)
             raise JcdException("Database error while inserting state")
@@ -770,11 +772,13 @@ class FetchCmd(object):
             # get all station states
             api = ApiAccess(apikey)
             json_stations = api.getStations()
-            full_dao.storeNewSamples(json_stations, self._timestamp)
+            num_new = full_dao.storeNewSamples(json_stations, self._timestamp)
+            if num_new > 0 and App.Verbose:
+                print "New samples acquired: %i" % num_new
             # analyse changes
             num_changed = short_dao.buildChangedSamples()
             if num_changed > 0 and App.Verbose:
-                print "Available samples for archiving: %i" % num_changed
+                print "Changed samples available for archive: %i" % num_changed
             # if everything went fine
             app_db.commit()
 
