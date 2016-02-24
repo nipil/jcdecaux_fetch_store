@@ -281,9 +281,9 @@ class FullSamplesDAO(object):
         self._create_table(self.TableNameNew)
         self._create_table(self.TableNameOld)
 
-    def _create_table(self, tableName):
+    def _create_table(self, table_name):
         if App.Verbose:
-            print "Creating table [%s]" % tableName
+            print "Creating table [%s]" % table_name
         try:
             self._database.connection.execute(
                 '''
@@ -302,11 +302,11 @@ class FullSamplesDAO(object):
                     station_name TEXT NOT NULL,
                     last_update INTEGER,
                     PRIMARY KEY (contract_id, station_number))
-                ''' % tableName)
+                ''' % table_name)
         except sqlite3.Error as error:
             print "%s: %s" % (type(error).__name__, error)
             raise JcdException(
-                "Database error while creating table [%s]" % tableName)
+                "Database error while creating table [%s]" % table_name)
 
     def store_new_samples(self, json_content, timestamp):
         # adapt json_content to database schema
@@ -400,7 +400,7 @@ class ShortSamplesDAO(object):
     def __init__(self, database):
         self._database = database
 
-    def _create_table(self, database, tableName):
+    def _create_table(self, database, table_name):
         try:
             database.connection.execute(
                 '''
@@ -411,11 +411,11 @@ class ShortSamplesDAO(object):
                     available_bikes INTEGER NOT NULL,
                     available_bike_stands INTEGER NOT NULL,
                     PRIMARY KEY (timestamp, contract_id, station_number))
-                ''' % tableName)
+                ''' % table_name)
         except sqlite3.Error as error:
             print "%s: %s" % (type(error).__name__, error)
             raise JcdException(
-                "Database error while creating table [%s]" % tableName)
+                "Database error while creating table [%s]" % table_name)
 
     def create_changed_table(self):
         if App.Verbose:
