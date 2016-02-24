@@ -400,7 +400,8 @@ class ShortSamplesDAO(object):
     def __init__(self, database):
         self._database = database
 
-    def _create_table(self, database, table_name):
+    @staticmethod
+    def _create_table(database, table_name):
         try:
             database.connection.execute(
                 '''
@@ -468,10 +469,12 @@ class ShortSamplesDAO(object):
             print "%s: %s" % (type(error).__name__, error)
             raise JcdException("Database error getting changed date list")
 
-    def get_schema_name(self, date):
+    @staticmethod
+    def get_schema_name(date):
         return "samples_%s" % date.replace("-", "_")
 
-    def get_db_file_name(self, schema_name):
+    @staticmethod
+    def get_db_file_name(schema_name):
         return "%s.db" % schema_name
 
     def initialize_archived_table(self, dbfilename):
@@ -523,7 +526,8 @@ class ApiAccess(object):
     def __init__(self, apikey):
         self._apikey = apikey
 
-    def _parse_reply(self, reply_text):
+    @staticmethod
+    def _parse_reply(reply_text):
         reply_json = json.loads(reply_text)
         if isinstance(reply_json, dict) and reply_json.has_key("error"):
             error = reply_json["error"]
@@ -574,7 +578,8 @@ class InitCmd(object):
     def __init__(self, args):
         self._args = args
 
-    def _remove_folder(self):
+    @staticmethod
+    def _remove_data_folder():
         # delete the folder
         try:
             if App.Verbose:
@@ -587,7 +592,8 @@ class InitCmd(object):
             # on other errors
             raise JcdException("Could not remove folder : %s" % error)
 
-    def _create_folder(self):
+    @staticmethod
+    def _create_data_folder():
         try:
             if App.Verbose:
                 print "Creating folder [%s]" % App.DataPath
@@ -601,7 +607,8 @@ class InitCmd(object):
             # other system error
             raise
 
-    def _create_tables(self):
+    @staticmethod
+    def _create_tables():
         with SqliteDB(App.DbName) as app_db:
             settings = SettingsDAO(app_db)
             settings.create_table()
@@ -612,8 +619,8 @@ class InitCmd(object):
             short_samples = ShortSamplesDAO(app_db)
             short_samples.create_changed_table()
 
-    # set default parameters
-    def set_default_parameters(self):
+    @staticmethod
+    def set_default_parameters():
         with SqliteDB(App.DbName) as app_db:
             settings = SettingsDAO(app_db)
             for value in ConfigCmd.Parameters:
@@ -627,8 +634,8 @@ class InitCmd(object):
     def run(self):
         # remove folder if creation is forced
         if self._args.force:
-            self._remove_folder()
-        self._create_folder()
+            self._remove_data_folder()
+        self._create_data_folder()
         # create tables in data db
         self._create_tables()
         self.set_default_parameters()
@@ -645,7 +652,8 @@ class ConfigCmd(object):
     def __init__(self, args):
         self._args = args
 
-    def display_parameter(self, param):
+    @staticmethod
+    def display_parameter(param):
         with SqliteDB(App.DbName) as app_db:
             settings = SettingsDAO(app_db)
             (value, last_modification) = settings.get_parameter(param)
@@ -653,7 +661,8 @@ class ConfigCmd(object):
             print "%s = %s (last modified on %s)" % (
                 param, value, last_modification)
 
-    def update_parameter(self, param, value):
+    @staticmethod
+    def update_parameter(param, value):
         with SqliteDB(App.DbName) as app_db:
             settings = SettingsDAO(app_db)
             settings.set_parameter(param, value)
@@ -689,13 +698,15 @@ class AdminCmd(object):
     def __init__(self, args):
         self._args = args
 
-    def vacuum(self):
+    @staticmethod
+    def vacuum():
         if App.Verbose:
             print "Vacuuming SqliteDB"
         with SqliteDB(App.DbName) as app_db:
             app_db.vacuum()
 
-    def apitest(self):
+    @staticmethod
+    def apitest():
         if App.Verbose:
             print "Testing JCDecaux API access"
         with SqliteDB(App.DbName) as app_db:
@@ -811,7 +822,8 @@ class StoreCmd(object):
     def __init__(self, args):
         self._args = args
 
-    def run(self):
+    @staticmethod
+    def run():
         with SqliteDB(App.DbName) as app_db:
             full_dao = FullSamplesDAO(app_db)
             short_dao = ShortSamplesDAO(app_db)
@@ -967,23 +979,28 @@ class App(object):
             print "JcdException: %s" % exception
             sys.exit(1)
 
-    def init(self, args):
+    @staticmethod
+    def init(args):
         init = InitCmd(args)
         init.run()
 
-    def config(self, args):
+    @staticmethod
+    def config(args):
         config = ConfigCmd(args)
         config.run()
 
-    def admin(self, args):
+    @staticmethod
+    def admin(args):
         admin = AdminCmd(args)
         admin.run()
 
-    def fetch(self, args):
+    @staticmethod
+    def fetch(args):
         fetch = FetchCmd(args)
         fetch.run()
 
-    def store(self, args):
+    @staticmethod
+    def store(args):
         store = StoreCmd(args)
         store.run()
 # main
