@@ -446,6 +446,24 @@ class ShortSamplesDAO(object):
                 return True
         return False
 
+    def archiveChangedSamples(self, date, target_schema):
+        try:
+            req = self._database.connection.execute(
+                '''
+                INSERT INTO %s.%s
+                SELECT * FROM %s
+                WHERE date(timestamp,'unixepoch') = ?
+                ''' % (target_schema,
+                    self.TableNameArchive,
+                    self.TableNameChanged),
+                (date,))
+            # return number of inserted records
+            return req.rowcount
+        except sqlite3.Error as error:
+            print "%s: %s" % (type(error).__name__, error)
+            raise JcdException(
+                "Database error achiving changed samples to %s" % target_schema)
+
 # access jcdecaux web api
 class ApiAccess(object):
 
@@ -726,28 +744,36 @@ class StoreCmd(object):
         with SqliteDB(App.DbName) as app_db:
             # analyse changes
             short_dao = ShortSamplesDAO(app_db)
-            num_changed_samples = short_dao.buildChangedSamples()
+            num_changed = short_dao.buildChangedSamples()
+            if num_changed > 0 and App.Verbose:
+                print "Changed samples: %i" % num_changed
             # daily databases are used
             stats = short_dao.getChangedStatistics()
             for date, count in stats:
+                # create, initialize databases as necessary
                 schemas_name = short_dao.getSchemaName(date)
                 db_filename = short_dao.getDbFileName(schemas_name)
                 # prepare archive storage if needed
                 created = short_dao.initializeDateDb(db_filename)
                 if created and App.Verbose:
-                    print "Creating database [%s] for %i samples" % (
-                        db_filename, count)
-                # attach daily db to main databases
-                # TODO: beware, attaching/detaching commits
+                    print "Database [%s] created" % db_filename
+                # WARNING: attaching commits current transaction
                 app_db.attachDatabase(db_filename, schemas_name)
-            # TODO: move samples around
-            # cleanup and do age samples
-            # full_dao = FullSamplesDAO(app_db)
-            # full_dao.moveNewSamplesIntoOld()
+                # moving changed samples to attached db
+                if App.Verbose:
+                    print "Storing %i new samples into %s" % (
+                        count, schemas_name)
+                # archive samples from date
+                num_stored = short_dao.archiveChangedSamples(date, schemas_name)
+                if num_stored != count:
+                    raise JcdException(
+                        "Not all changed samples could be archived")
+                if App.Verbose:
+                    print "%i samples stored" % num_stored
+                # full_dao = FullSamplesDAO(app_db)
+                # full_dao.moveNewSamplesIntoOld()
             # if everything went fine
             # app_db.commit()
-            if num_changed_samples > 0 and App.Verbose:
-                print "Changed samples: %i" % num_changed_samples
 
 # main app
 class App(object):
