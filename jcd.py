@@ -818,8 +818,18 @@ class StoreCmd(object):
                 num_aged = full_dao.moveNewSamplesIntoOld(date)
                 if App.Verbose:
                     print "Aged %i samples for %s" % (num_aged, date)
-                # if everything went fine
+                # if everything went fine for this date
                 app_db.commit()
+                # WARNING: detaching commits current transaction
+                app_db.detachDatabase(schemas_name)
+                # verify that nothing new or changed remains after processing
+            remain_new = full_dao.getNewCount()
+            remain_changed = short_dao.getChangedCount()
+            if remain_new > 0 or remain_changed > 0:
+                raise JcdException((
+                    "Unprocessed samples will be lost: "
+                    "%i changed linked to %i new") % (
+                        remain_changed, remain_new))
 
 # main app
 class App(object):
