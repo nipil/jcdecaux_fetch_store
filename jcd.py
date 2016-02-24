@@ -340,13 +340,15 @@ class FullSamplesDAO(object):
             print "%s: %s" % (type(error).__name__, error)
             raise JcdException("Database error while inserting state")
 
-    def moveNewSamplesIntoOld(self):
+    def moveNewSamplesIntoOld(self, date):
         try:
             self._database.connection.execute(
                 '''
                 INSERT OR REPLACE INTO %s
                 SELECT * FROM %s
-                ''' % (self.TableNameOld, self.TableNameNew))
+                WHERE date(timestamp,'unixepoch') = ?
+                ''' % (self.TableNameOld, self.TableNameNew),
+                date)
             self._database.connection.execute(
                 '''
                 DELETE FROM %s
@@ -420,8 +422,7 @@ class ShortSamplesDAO(object):
             req = self._database.connection.execute(
                 '''
                 SELECT
-                    STRFTIME('%%Y_%%m_%%d',
-                        DATE(timestamp, 'unixepoch')) AS day,
+                    DATE(timestamp, 'unixepoch') AS day,
                     COUNT(timestamp) AS num_changed_samples
                 FROM %s
                 GROUP BY day
@@ -433,7 +434,7 @@ class ShortSamplesDAO(object):
             raise JcdException("Database error getting changed date list")
 
     def getSchemaName(self, date):
-        return "samples_%s" % date
+        return "samples_%s" % date.replace("-", "_")
 
     def getDbFileName(self, schema_name):
         return "%s.db" % schema_name
