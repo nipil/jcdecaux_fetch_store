@@ -24,15 +24,13 @@
 # DEALINGS IN THE SOFTWARE.
 
 import sys
-import time
 import json
-import errno
-import shutil
-import random
 import os.path
 import sqlite3
 import argparse
 import requests
+
+from cmd import InitCmd, ConfigCmd, AdminCmd, FetchCmd, StoreCmd
 
 # applications specific exception
 class JcdException(Exception):

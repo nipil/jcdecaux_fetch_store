@@ -23,16 +23,14 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 
-import sys
 import time
-import json
 import errno
 import shutil
 import random
 import os.path
-import sqlite3
-import argparse
-import requests
+
+from app import JcdException, SqliteDB, ApiAccess, App
+from dao import SettingsDAO, ContractsDAO, FullSamplesDAO, ShortSamplesDAO
 
 # initialize application data
 class InitCmd(object):
