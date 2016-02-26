@@ -23,20 +23,11 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 
-import sys
-import time
-import json
-import errno
-import shutil
-import random
-import os.path
-import sqlite3
-import argparse
-import requests
+import jcd.app
 
 # main
 if __name__ == '__main__':
     try:
-        App("~/.jcd", "app.db").run()
+        jcd.app.App("~/.jcd", "app.db").run()
     except KeyboardInterrupt:
         pass

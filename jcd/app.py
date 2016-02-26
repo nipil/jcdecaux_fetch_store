@@ -24,15 +24,13 @@
 # DEALINGS IN THE SOFTWARE.
 
 import sys
-import time
 import json
-import errno
-import shutil
-import random
 import os.path
 import sqlite3
 import argparse
 import requests
+
+import jcd.cmd
 
 # applications specific exception
 class JcdException(Exception):
@@ -251,7 +249,7 @@ class App(object):
             help='config application parameters',
             description='Configure application'
         )
-        for value in ConfigCmd.Parameters:
+        for value in jcd.cmd.ConfigCmd.Parameters:
             config.add_argument(
                 '--%s' % value[0],
                 type=value[1],
@@ -263,7 +261,7 @@ class App(object):
             help='administrate application database',
             description='Manage database'
         )
-        for value in AdminCmd.Parameters:
+        for value in jcd.cmd.AdminCmd.Parameters:
             admin.add_argument(
                 '--%s' % value[0],
                 action='store_true',
@@ -316,25 +314,25 @@ class App(object):
 
     @staticmethod
     def init(args):
-        init = InitCmd(args)
+        init = jcd.cmd.InitCmd(args)
         init.run()
 
     @staticmethod
     def config(args):
-        config = ConfigCmd(args)
+        config = jcd.cmd.ConfigCmd(args)
         config.run()
 
     @staticmethod
     def admin(args):
-        admin = AdminCmd(args)
+        admin = jcd.cmd.AdminCmd(args)
         admin.run()
 
     @staticmethod
     def fetch(args):
-        fetch = FetchCmd(args)
+        fetch = jcd.cmd.FetchCmd(args)
         fetch.run()
 
     @staticmethod
     def store(args):
-        store = StoreCmd(args)
+        store = jcd.cmd.StoreCmd(args)
         store.run()
