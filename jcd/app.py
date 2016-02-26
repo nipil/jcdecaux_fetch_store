@@ -289,6 +289,12 @@ class App(object):
             help='store fetched state into database',
             description='Store state in database'
         )
+        # cron command
+        top_command.add_parser(
+            'cron',
+            help='do a full acquisition cycle',
+            description='Fetch and store according to configuration'
+        )
 
     def run(self):
         try:
@@ -336,3 +342,8 @@ class App(object):
     def store(args):
         store = jcd.cmd.StoreCmd(args)
         store.run()
+
+    @staticmethod
+    def cron(args):
+        cron = jcd.cmd.CronCmd(args)
+        cron.run()

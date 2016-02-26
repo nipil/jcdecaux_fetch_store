@@ -105,6 +105,7 @@ class ConfigCmd(object):
 
     Parameters = (
         ('apikey', str, 'JCDecaux API key', None),
+        ('contract_ttl', int, 'contracts refresh interval in seconds', 3600),
         ('fetch', int, 'Enable/disable fetch operation', 0),
         ('import', int, 'Enable/disable import operation', 0),
     )
@@ -325,3 +326,13 @@ class StoreCmd(object):
                     "Unprocessed samples will be lost: "
                     "%i changed linked to %i new") % (
                         remain_changed, remain_new))
+
+# store state into database:
+class CronCmd(object):
+
+    def __init__(self, args):
+        self._args = args
+
+    @staticmethod
+    def run():
+        pass
