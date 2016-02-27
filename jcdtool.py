@@ -28,6 +28,6 @@ import jcd.app
 # main
 if __name__ == '__main__':
     try:
-        jcd.app.App("~/.jcd", "app.db").run()
+        jcd.app.App("~/.jcd_v2", "app.db").run()
     except KeyboardInterrupt:
         pass

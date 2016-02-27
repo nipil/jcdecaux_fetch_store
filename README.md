@@ -68,11 +68,11 @@ Use `--force` will **REMOVE** the data folder including all its file, and recrea
 
 Sample output when using `--verbose`:
 
-	Creating folder [/home/user/.jcd]
-	JcdException: Folder [/home/user/.jcd] already exists. Use --force to destroy everything anyway.
+	Creating folder [/home/user/.jcd_v2]
+	JcdException: Folder [/home/user/.jcd_v2] already exists. Use --force to destroy everything anyway.
 
-	Removing folder [/home/user/.jcd] and its content
-	Creating folder [/home/user/.jcd]
+	Removing folder [/home/user/.jcd_v2] and its content
+	Creating folder [/home/user/.jcd_v2]
 	Creating table [settings]
 	Creating table [contracts]
 	Creating table [new_samples]
