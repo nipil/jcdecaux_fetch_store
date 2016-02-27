@@ -10,6 +10,25 @@ Pyhton 2.7, with python-requests (not too antique version) and python-pysqlite2 
 
 If you want to use another path, either use the move the default one and create a symlink to it in its place, or use the `--datadir` parameter (see below) *consistently across all your commands*.
 
+# Upgrade path from version 1
+
+Version 2 is incompatible with version 1, yet they can of course co-exist **in separate folders**.
+
+I recommend to use version 2 as soon as possible, as version 1 will not be maintained.
+
+Please migrate as follows :
+- initialize version 2 (defaults path are already different for v1 and v2)
+- configure version 2
+- do a test cron for version 2 job with `--verbose`
+- if all goes ok, configure the cron job for the version 2
+- wait a few minutes to bridge the data gap between version 1 and 2
+- un-configure all jobs related to version 1
+- use the `import_1to2.py` script to import version 1 data (**Not Yet Implemented**)
+- archive version 1 data if you want to rollback
+- remove version 1 data
+
+I think it is straightforward but it still deserved to be explained.
+
 # Setup and operation
 
 Initial setup
