@@ -1,6 +1,6 @@
 # What is this ?
 
-This is a python package which uses [JCDecaux API](https://developer.jcdecaux.com/) to get information fom [their bike sharing service](http://www.cyclocity.com), and store station information changes station (available bikes and empty stands) efficiently in a series of SQLite daily database.
+This is a python package which uses [JCDecaux API](https://developer.jcdecaux.com/) to get information from [their bike sharing service](http://www.cyclocity.com), and store station data changes (available bikes and empty stands) efficiently in a series of SQLite daily database.
 
 # Requirements
 
@@ -18,12 +18,14 @@ I recommend to use version 2 as soon as possible, as version 1 will not be maint
 
 Please migrate as follows :
 - initialize version 2 (defaults path are already different for v1 and v2)
-- configure version 2
-- do a test cron for version 2 job with `--verbose`
-- if all goes ok, configure the cron job for the version 2
-- wait a few minutes to bridge the data gap between version 1 and 2
-- un-configure all jobs related to version 1
-- use the `import_1to2.py` script to import version 1 data (**Not Yet Implemented**)
+- configure the apikey for version 2
+- do a test cron for version 2 job with `./jcdtool.py--verbose cron`
+- if all goes ok, configure the real cron job for the version 2
+- wait a few minutes to bridge the gap between end of version 1 data and beginning of version 2 data
+- un-configure all cron jobs related to version 1
+
+The following can be done anytime later :
+- use `utils/import_1to2.py` to import version 1 data (**Not Yet Implemented**)
 - archive version 1 data if you want to rollback
 - remove version 1 data
 
@@ -160,3 +162,16 @@ Sample output when using `--verbose`:
 `1` when something was detected wrong
 
 And a traceback for anything bad not yet handled ...
+
+# Licensing for the collected data
+
+The data provider is very clear in the licence ([english](https://developer.jcdecaux.com/files/Open-Licence-en.pdf) / [french](https://developer.jcdecaux.com/files/Open-Licence-fr.pdf)) you accept when using their api.
+
+Basically you can to everything you want with the collected data, as long as you :
+- provide **paternity** reference, for example a link back to the API website.
+- provide the **date/time of the last update**
+
+Notably, they say their license is compatible with the "Open Government Licence" (OGL) from the United Kingdom, with "CC-BY 2.0" from Creative Commons, and "Open Data Commons Attribution" (ODC-BY) from the Open
+Knowledge Foundation.
+
+So i think we can go wild with the collected data !
