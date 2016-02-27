@@ -138,7 +138,7 @@ See `admin --help` for admin command list. If no command is provided, nothing is
 
 `--apitest` tests if the api is working (it needs a valid API key), and tests each available API entry point for random contracts and stations.
 
-`--vacuum` vacuums the application database. Not much use since v1.0 now samples are in their own daily database, but why not keep it.
+`--vacuum` does a "defragmentation" of the application database. Not much use outside of v1.0 as samples are in their own daily database now, but why not keep it. By the way, the daily databases are **not** vacuum'ed, as they are not modified and only grow, and thus do not fragment.
 
 Sample output when using `--verbose`:
 
