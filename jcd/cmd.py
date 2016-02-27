@@ -322,14 +322,12 @@ class StoreCmd(object):
                 app_db.commit()
                 # WARNING: detaching commits current transaction
                 app_db.detach_database(schema_name)
-                # verify that nothing new or changed remains after processing
-            remain_new = full_dao.get_new_count()
+            # verify nothing changed remains after processing
+            # unchanged new are not aged, old holds last change
             remain_changed = short_dao.get_changed_count()
-            if remain_new > 0 or remain_changed > 0:
-                raise jcd.app.JcdException((
-                    "Unprocessed samples will be lost: "
-                    "%i changed linked to %i new") % (
-                        remain_changed, remain_new))
+            if remain_changed > 0:
+                raise jcd.app.JcdException(
+                    "Unprocessed changes: %i" % remain_changed)
 
 # store state into database:
 class CronCmd(object):
