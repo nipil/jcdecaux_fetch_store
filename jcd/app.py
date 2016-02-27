@@ -154,10 +154,6 @@ class ApiAccess(object):
         reply_json = json.loads(reply_text)
         if isinstance(reply_json, dict) and reply_json.has_key("error"):
             error = reply_json["error"]
-            # Test for invalid API key
-            if error == "Unauthorized":
-                # TODO: disable fetch
-                pass
             raise JcdException(
                 "JCDecaux API exception: %s" % reply_json["error"])
         return reply_json
