@@ -129,10 +129,6 @@ class SqliteDB(object):
             raise JcdException(
                 "Database error while detaching [%s]" % (schema_name, ))
 
-    def detach_all_databases(self):
-        for schema in self._att_databases.keys():
-            self.detach_database(schema)
-
     def get_count(self, target):
         try:
             req = self.connection.execute(

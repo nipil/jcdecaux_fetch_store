@@ -282,12 +282,6 @@ class FullSamplesDAO(object):
             print "%s: %s" % (type(error).__name__, error)
             raise jcd.app.JcdException("Database error ageing new samples into old")
 
-    def get_new_count(self):
-        return self._database.get_count(self.TableNameNew)
-
-    def get_old_count(self):
-        return self._database.get_count(self.TableNameOld)
-
 # stored sample DAO
 class ShortSamplesDAO(object):
 
