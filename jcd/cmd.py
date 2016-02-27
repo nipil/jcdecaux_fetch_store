@@ -223,14 +223,19 @@ class AdminCmd(object):
 # fetch information from api:
 class FetchCmd(object):
 
-    def __init__(self, args):
+    def __init__(self, args, check_contracts_ttl=False):
         self._args = args
+        self._check_contracts_ttl = check_contracts_ttl
         self._timestamp = int(time.time())
 
     def fetch_contracts(self):
         with jcd.app.SqliteDB(jcd.app.App.DbName) as app_db:
-            # fetch api key
             settings = jcd.dao.SettingsDAO(app_db)
+            dao = jcd.dao.ContractsDAO(app_db)
+            # in case of cron, check for refresh necessity
+            if self._check_contracts_ttl and not dao.is_refresh_needed():
+                return
+            # fetch api key
             apikey = settings.get_parameter("apikey")
             if apikey is None:
                 raise jcd.app.JcdException(
@@ -239,7 +244,6 @@ class FetchCmd(object):
             # get all available contracts
             api = jcd.app.ApiAccess(apikey)
             json_contracts = api.get_contracts()
-            dao = jcd.dao.ContractsDAO(app_db)
             new_contracts_count = dao.store_contracts(
                 json_contracts, self._timestamp)
             # if everything went fine
@@ -335,4 +339,10 @@ class CronCmd(object):
 
     @staticmethod
     def run():
-        pass
+        from argparse import Namespace
+        params = Namespace(state=True, contracts=True)
+        fetch = FetchCmd(params, check_contracts_ttl=True)
+        fetch.run()
+        params = Namespace()
+        store = StoreCmd(params)
+        store.run()
