@@ -26,6 +26,7 @@
 import sqlite3
 
 import jcd.app
+import jcd.cmd
 
 # settings table
 class SettingsDAO(object):
@@ -147,6 +148,22 @@ class ContractsDAO(object):
         except sqlite3.Error as error:
             print "%s: %s" % (type(error).__name__, error)
             raise jcd.app.JcdException("Database error while inserting contracts")
+
+    def is_refresh_needed(self):
+        try:
+            req = self._database.connection.execute(
+                '''
+                SELECT STRFTIME('%s','now') - MAX(timestamp) > value
+                FROM contracts, settings
+                WHERE name = ?
+                ''', (jcd.cmd.ConfigCmd.Parameters[1][0],))
+            result = req.fetchone()
+            # if no contract, None
+            # if latest refresh is too old, 1
+            return result[0] is None or result[0] == 1
+        except sqlite3.Error as error:
+            print "%s: %s" % (type(error).__name__, error)
+            raise jcd.app.JcdException("Database error while checking contracts refresh")
 
 # settings table
 class FullSamplesDAO(object):
