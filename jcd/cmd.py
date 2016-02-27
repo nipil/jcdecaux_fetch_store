@@ -160,7 +160,7 @@ class AdminCmd(object):
     @staticmethod
     def vacuum():
         if jcd.app.App.Verbose:
-            print "Vacuuming SqliteDB"
+            print "Vacuuming %s" % jcd.app.App.DbName
         with jcd.app.SqliteDB(jcd.app.App.DbName) as app_db:
             app_db.vacuum()
 

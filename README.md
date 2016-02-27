@@ -142,7 +142,7 @@ See `admin --help` for admin command list. If no command is provided, nothing is
 
 Sample output when using `--verbose`:
 
-	Vacuuming SqliteDB
+	Vacuuming app.db
 
 	Testing JCDecaux API access
 	Searching contracts ...
