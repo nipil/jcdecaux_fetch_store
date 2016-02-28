@@ -175,3 +175,18 @@ Notably, they say their license is compatible with the "Open Government Licence"
 Knowledge Foundation.
 
 So i think we can go wild with the collected data !
+
+# FAQ #1: time, timezones and UTC vs localtime
+
+The python script uses `time.time()` and [linux/glibc](http://linux.die.net/man/2/time) says it's in UTC. The SQLite statements use `strftime('%s','now')` and the [documentation](https://www.sqlite.org/lang_datefunc.html) says UTC is used. *Thus the whole tool uses UTC for time*.
+
+As a consequence :
+- the "daily" database file names are referring to **UTC date**
+- depending on your timezones, your "daily" data bases will be modified up to "sooner" or "later" than what you might expect (see `ls -l ~/.jcd_v2` )
+- when using the collected databases, remember to use/convert to UTC time, and query multiple databases files accordingly (using SQLite `ATTACH` with different schema name, for example)
+
+Example: on 2016-02-28 in France (GMT+1, DST not active on that day) the last modification for the '2016-02-27' happened at 00:59 on 2016-02-28. That's because at the time that cron job ran, UTC time was 2016-02-27 23:59:00.
+
+Why do it that way ? JCDecaux API is providing information mainly for France, but for cities in other timezones too. Because of that, i deemed it more sensible to use UTC across the board when *collecting*, and delegate timezone (eventual) management when the collected data is *used*. Second reason, this should allow for clean handling of DST (daylight saving time) for the timezones using it (including France)
+
+This behaviour is consistent with version 1 way of handling time and dates.
