@@ -307,7 +307,7 @@ class App(object):
             # run requested command
             command(args)
         except JcdException as exception:
-            print "JcdException: %s" % exception
+            print >>sys.stderr, "JcdException: %s" % exception
             sys.exit(1)
 
     @staticmethod
