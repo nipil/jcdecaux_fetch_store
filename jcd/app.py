@@ -53,7 +53,12 @@ class SqliteDB(object):
 
     def open(self):
         if self.connection is None:
-            self.connection = sqlite3.connect(self._db_path)
+            try:
+                self.connection = sqlite3.connect(self._db_path)
+            except sqlite3.Error as error:
+                print "%s: %s" % (type(error).__name__, error)
+                raise JcdException(
+                    "Database error while opening [%s]" % self._db_path)
 
     def close(self):
         # close main databases
