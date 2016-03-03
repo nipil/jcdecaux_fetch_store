@@ -422,7 +422,19 @@ class Version1Dao(object):
         return self._database.has_table(self.TableName, self.SchemaName)
 
     def find_all_dates(self):
-        raise NotImplementedError()
+        try:
+            req = self._database.connection.execute(
+                '''
+                SELECT DISTINCT(DATE(timestamp,'unixepoch')) AS day
+                FROM %s.%s
+                ORDER BY day
+                ''' % (self.SchemaName, self.TableName))
+            days = req.fetchall()
+            return days
+        except sqlite3.Error as error:
+            print "%s: %s" % (type(error).__name__, error)
+            raise jcd.app.JcdException(
+                "Database error listing available dates in version 1 data")
 
     def find_samples(self, date):
         raise NotImplementedError()

@@ -364,3 +364,9 @@ class Import1Cmd(object):
             if not dao_v1.has_sample_table():
                 raise jcd.app.JcdException(
                     "Version 1 database is missing its sample table")
+            if jcd.app.App.Verbose:
+                print "Searching version 1 for available dates..."
+                print "WARNING: this operation will take a while"
+                print "Hint: it takes about 10 sec per month of data :-)"
+            days = dao_v1.find_all_dates()
+            print days, len(days)
