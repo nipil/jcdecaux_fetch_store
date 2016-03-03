@@ -348,6 +348,7 @@ class CronCmd(object):
 # import data from version 1
 class Import1Cmd(object):
 
+    DefaultFile = "jcd.sqlite3"
     DefaultPath = "~/.jcd"
 
     def __init__(self, args):
@@ -356,7 +357,7 @@ class Import1Cmd(object):
     def run(self):
         with jcd.app.SqliteDB(jcd.app.App.DbName) as app_db:
             # attach version 1 database
-            app_db.attach_database("jcd.sqlite3",
+            app_db.attach_database(self.DefaultFile,
                 jcd.dao.Version1Dao.SchemaName, self._args.source)
             # check for version 1 data
             dao_v1 = jcd.dao.Version1Dao(app_db)
