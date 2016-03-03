@@ -28,6 +28,7 @@ import errno
 import shutil
 import random
 import os.path
+import collections
 
 import jcd.app
 import jcd.dao
@@ -384,9 +385,35 @@ class Import1Cmd(object):
                 created = short_dao.initialize_archived_table(db_filename)
                 if created:
                     print "Database", db_filename, "created"
-                print "Listing samples for date", date[0], "..."
+                print "Listing samples for date", date[0], "...",
                 samples = dao_v1.find_samples(date[0])
-                last = None
-                for sample in samples:
-                    last = sample
                 # deduplicate samples
+                skipped = 0
+                done = 0
+                last = None
+                kept = collections.deque()
+                for sample in samples:
+                    done += 1
+                    # handle the first
+                    if last is None:
+                        kept.append(sample)
+                        last = sample
+                        continue
+                    # handle change of contract or station
+                    if sample[1] != last[1] or sample[2] != last[2]:
+                        kept.append(sample)
+                        last = sample
+                        continue
+                    # check that sorting is ok
+                    assert sample[0] > last[0]
+                    # handle change of bikes or empty slots
+                    if sample[3] != last[3] or sample[4] != last[4]:
+                        kept.append(sample)
+                        last = sample
+                        continue
+                    # no change was detected
+                    skipped += 1
+                    last = sample
+                print "Pruned", skipped, "duplicates out of", done, ("(%i%%)" % (100*skipped/done)) if done > 0 else ""
+                assert done - skipped - len(kept) == 0
+                kept.clear()
