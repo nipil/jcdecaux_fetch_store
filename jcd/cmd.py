@@ -355,6 +355,13 @@ class Import1Cmd(object):
         self._args = args
 
     def run(self):
+        print ("INFORMATION:\n"
+            "- This operation can be very long, depending of your data. Be patient !\n"
+            "- Interrupting with CTRL-C will interrupt between days, not right away, do not panic :-)\n"
+            "EXAMPLE\n"
+            "- For 85 days of data (~1GB of data) on a Celeron E3300@2.5Ghz\n"
+            "- Searching available dates (done at start) takes a about 10 seconds\n"
+            "- Searching samples (for each day) will take about 10 seconds")
         with jcd.app.SqliteDB(jcd.app.App.DbName) as app_db:
             # prepare the dao for version 2 data
             short_dao = jcd.dao.ShortSamplesDAO(app_db)
@@ -367,18 +374,17 @@ class Import1Cmd(object):
                 raise jcd.app.JcdException(
                     "Version 1 database is missing its sample table")
             # search for version 1 dates to import
-            if jcd.app.App.Verbose:
-                print "Searching version 1 for available dates..."
-                print "WARNING: this operation will take a while"
-                print "Hint: it takes about 10 sec per month of data :-)"
+            print "Searching version 1 database for available dates... "
             days = dao_v1.find_all_dates()
-            if jcd.app.App.Verbose:
-                print "Found %i dates." % len(days)
+            print "... Found", len(days), "dates."
             for date in days:
                 # create, initialize databases as necessary
                 schema_name = short_dao.get_schema_name(date[0])
                 db_filename = short_dao.get_db_file_name(schema_name)
                 # prepare archive storage if needed
                 created = short_dao.initialize_archived_table(db_filename)
-                if jcd.app.App.Verbose and created:
-                    print "Database [%s] created" % db_filename
+                if created:
+                    print "Database", db_filename, "created"
+                print "Listing samples for date", date[0], "..."
+                samples = dao_v1.find_samples(date[0])
+                print "... Found", len(samples), "samples."

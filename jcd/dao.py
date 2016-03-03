@@ -437,7 +437,30 @@ class Version1Dao(object):
                 "Database error listing available dates in version 1 data")
 
     def find_samples(self, date):
-        raise NotImplementedError()
+        try:
+            req = self._database.connection.execute(
+                '''
+                SELECT s.timestamp,
+                    c.contract_id,
+                    s.station_number,
+                    s.bike,
+                    s.empty
+                FROM %s AS c JOIN %s.%s AS s
+                ON c.contract_name = s.contract_name
+                WHERE s.timestamp >= strftime('%%s', date(:day)) AND
+                    s.timestamp < strftime('%%s', date(:day, "+1 day"))
+                ORDER BY c.contract_id, s.station_number, s.timestamp
+                ''' % (
+                    ContractsDAO.TableName,
+                    self.SchemaName,
+                    self.TableName),
+                    {"day": date})
+            days = req.fetchall()
+            return days
+        except sqlite3.Error as error:
+            print "%s: %s" % (type(error).__name__, error)
+            raise jcd.app.JcdException(
+                "Database error listing available dates in version 1 data")
 
     def remove_samples(self, date):
         raise NotImplementedError()
