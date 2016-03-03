@@ -377,6 +377,7 @@ class Import1Cmd(object):
             # search for version 1 dates to import
             print "Searching version 1 database for available dates... "
             days = dao_v1.find_all_dates()
+            kept = collections.deque()
             for date in days:
                 # create, initialize databases as necessary
                 schema_name = short_dao.get_schema_name(date[0])
@@ -391,7 +392,6 @@ class Import1Cmd(object):
                 skipped = 0
                 done = 0
                 last = None
-                kept = collections.deque()
                 for sample in samples:
                     done += 1
                     # handle the first
@@ -404,8 +404,6 @@ class Import1Cmd(object):
                         kept.append(sample)
                         last = sample
                         continue
-                    # check that sorting is ok
-                    assert sample[0] > last[0]
                     # handle change of bikes or empty slots
                     if sample[3] != last[3] or sample[4] != last[4]:
                         kept.append(sample)
@@ -414,6 +412,9 @@ class Import1Cmd(object):
                     # no change was detected
                     skipped += 1
                     last = sample
+                    # TODO: periodically store kept samples
+                # TODO: flush remaining samples
+                # TODO: remove samples from version 1 database
+                # TODO: commit
+                # TODO: detach database
                 print "Pruned", skipped, "duplicates out of", done, ("(%i%%)" % (100*skipped/done)) if done > 0 else ""
-                assert done - skipped - len(kept) == 0
-                kept.clear()
