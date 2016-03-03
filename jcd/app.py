@@ -89,14 +89,14 @@ class SqliteDB(object):
         if self.connection is not None:
             self.connection.execute("vacuum")
 
-    def has_table(self, name):
+    def has_table(self, name, schema="main"):
         try:
             req = self.connection.execute(
                 '''
                 SELECT count(*), name
-                FROM sqlite_master
+                FROM %s.sqlite_master
                 WHERE type = "table" AND name = ?
-                ''', (name, ))
+                ''' % schema, (name, ))
             count, name = req.fetchone()
             return count != 0
         except sqlite3.Error as error:
