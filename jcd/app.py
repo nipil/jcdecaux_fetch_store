@@ -41,15 +41,18 @@ class JcdException(Exception):
 # manages access to the application database
 class SqliteDB(object):
 
-    def __init__(self, db_filename):
-        self._db_path = SqliteDB.get_full_path(db_filename)
+    def __init__(self, db_filename, path=None):
+        self._db_path = SqliteDB.get_full_path(db_filename, path)
         self.connection = None
         self._att_databases = {}
 
     @staticmethod
-    def get_full_path(filename):
+    def get_full_path(filename, path=None):
+        # use the current version path as default path
+        if path is None:
+            path = App.DataPath
         return os.path.normpath(
-            "%s/%s" % (App.DataPath, filename))
+            "%s/%s" % (path, filename))
 
     def open(self):
         if self.connection is None:
@@ -101,8 +104,8 @@ class SqliteDB(object):
             raise JcdException(
                 "Database error checking if table [%s] exists" % name)
 
-    def attach_database(self, file_name, schema_name):
-        file_path = SqliteDB.get_full_path(file_name)
+    def attach_database(self, file_name, schema_name, path=None):
+        file_path = SqliteDB.get_full_path(file_name, path)
         if schema_name in self._att_databases:
             raise JcdException(
                 "Database is already attached as schema [%s]" % schema_name)
