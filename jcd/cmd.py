@@ -342,3 +342,16 @@ class CronCmd(object):
         params = Namespace()
         store = StoreCmd(params)
         store.run()
+
+# import data from version 1
+class Import1Cmd(object):
+
+    Parameters = (
+        ('source', str, 'directory of version 1 data to import', "~/.jcd"),
+    )
+
+    def __init__(self, args):
+        self._args = args
+
+    def run(self):
+        print self._args.source

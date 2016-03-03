@@ -408,3 +408,21 @@ class ShortSamplesDAO(object):
 
     def get_changed_count(self):
         return self._database.get_count(self.TableNameChanged)
+
+# stored sample DAO
+class Version1Dao(object):
+
+    TableName = "samples"
+    SchemaName = "version1"
+
+    def __init__(self, database):
+        self._database = database
+
+    def find_all_dates(self):
+        raise NotImplementedError()
+
+    def find_samples(self, date):
+        raise NotImplementedError()
+
+    def remove_samples(self, date):
+        raise NotImplementedError()

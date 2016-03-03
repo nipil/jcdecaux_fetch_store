@@ -292,6 +292,18 @@ class App(object):
             help='do a full acquisition cycle',
             description='Fetch and store according to configuration'
         )
+        # import v1 command
+        import_v1 = top_command.add_parser(
+            'import_v1',
+            help='import data from version 1',
+            description='Analize and import data from the version 1'
+        )
+        for value in jcd.cmd.Import1Cmd.Parameters:
+            import_v1.add_argument(
+                '--%s' % value[0],
+                type=value[1],
+                help=value[2],
+            )
 
     def run(self):
         try:
@@ -344,3 +356,8 @@ class App(object):
     def cron(args):
         cron = jcd.cmd.CronCmd(args)
         cron.run()
+
+    @staticmethod
+    def import_v1(args):
+        import1 = jcd.cmd.Import1Cmd(args)
+        import1.run()
