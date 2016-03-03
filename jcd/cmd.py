@@ -376,7 +376,6 @@ class Import1Cmd(object):
             # search for version 1 dates to import
             print "Searching version 1 database for available dates... "
             days = dao_v1.find_all_dates()
-            print "... Found", len(days), "dates."
             for date in days:
                 # create, initialize databases as necessary
                 schema_name = short_dao.get_schema_name(date[0])
@@ -387,4 +386,7 @@ class Import1Cmd(object):
                     print "Database", db_filename, "created"
                 print "Listing samples for date", date[0], "..."
                 samples = dao_v1.find_samples(date[0])
-                print "... Found", len(samples), "samples."
+                last = None
+                for sample in samples:
+                    last = sample
+                # deduplicate samples

@@ -455,8 +455,12 @@ class Version1Dao(object):
                     self.SchemaName,
                     self.TableName),
                     {"day": date})
-            days = req.fetchall()
-            return days
+            while True:
+                samples = req.fetchmany(1000)
+                if not samples:
+                    break
+                for sample in samples:
+                    yield sample
         except sqlite3.Error as error:
             print "%s: %s" % (type(error).__name__, error)
             raise jcd.app.JcdException(
