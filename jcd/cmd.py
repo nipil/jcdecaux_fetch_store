@@ -356,6 +356,8 @@ class Import1Cmd(object):
 
     def run(self):
         with jcd.app.SqliteDB(jcd.app.App.DbName) as app_db:
+            # prepare the dao for version 2 data
+            short_dao = jcd.dao.ShortSamplesDAO(app_db)
             # attach version 1 database
             app_db.attach_database(self.DefaultFile,
                 jcd.dao.Version1Dao.SchemaName, self._args.source)
@@ -364,9 +366,19 @@ class Import1Cmd(object):
             if not dao_v1.has_sample_table():
                 raise jcd.app.JcdException(
                     "Version 1 database is missing its sample table")
+            # search for version 1 dates to import
             if jcd.app.App.Verbose:
                 print "Searching version 1 for available dates..."
                 print "WARNING: this operation will take a while"
                 print "Hint: it takes about 10 sec per month of data :-)"
             days = dao_v1.find_all_dates()
-            print days, len(days)
+            if jcd.app.App.Verbose:
+                print "Found %i dates." % len(days)
+            for date in days:
+                # create, initialize databases as necessary
+                schema_name = short_dao.get_schema_name(date[0])
+                db_filename = short_dao.get_db_file_name(schema_name)
+                # prepare archive storage if needed
+                created = short_dao.initialize_archived_table(db_filename)
+                if jcd.app.App.Verbose and created:
+                    print "Database [%s] created" % db_filename
