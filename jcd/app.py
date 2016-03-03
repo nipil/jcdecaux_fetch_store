@@ -301,12 +301,11 @@ class App(object):
             help='import data from version 1',
             description='Analize and import data from the version 1'
         )
-        for value in jcd.cmd.Import1Cmd.Parameters:
-            import_v1.add_argument(
-                '--%s' % value[0],
-                type=value[1],
-                help=value[2],
-            )
+        import_v1.add_argument(
+            '--source',
+            help='directory of version 1 data to import (default: %s)' % jcd.cmd.Import1Cmd.DefaultPath,
+            default=jcd.cmd.Import1Cmd.DefaultPath
+        )
 
     def run(self):
         try:

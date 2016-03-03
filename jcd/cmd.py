@@ -346,9 +346,7 @@ class CronCmd(object):
 # import data from version 1
 class Import1Cmd(object):
 
-    Parameters = (
-        ('source', str, 'directory of version 1 data to import', "~/.jcd"),
-    )
+    DefaultPath = "~/.jcd"
 
     def __init__(self, args):
         self._args = args
