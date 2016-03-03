@@ -51,8 +51,8 @@ class SqliteDB(object):
         # use the current version path as default path
         if path is None:
             path = App.DataPath
-        return os.path.normpath(
-            "%s/%s" % (path, filename))
+        return os.path.normpath(os.path.expanduser(
+            "%s/%s" % (path, filename)))
 
     def open(self):
         if self.connection is None:
@@ -312,10 +312,10 @@ class App(object):
             # parse arguments
             args = self._parser.parse_args()
             # consume data-path argument
-            App.DataPath = os.path.expanduser(args.datadir)
+            App.DataPath = args.datadir
             del args.datadir
             # consume db name argument
-            App.DbName = os.path.expanduser(args.dbname)
+            App.DbName = args.dbname
             del args.dbname
             # consume verbose
             App.Verbose = args.verbose

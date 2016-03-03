@@ -44,7 +44,7 @@ class InitCmd(object):
         try:
             if jcd.app.App.Verbose:
                 print "Removing folder [%s] and its content" % jcd.app.App.DataPath
-            shutil.rmtree(jcd.app.App.DataPath)
+            shutil.rmtree(os.path.expanduser(jcd.app.App.DataPath))
         except OSError as error:
             # silently ignore "absent directory"
             if error.errno == errno.ENOENT:
@@ -57,7 +57,7 @@ class InitCmd(object):
         try:
             if jcd.app.App.Verbose:
                 print "Creating folder [%s]" % jcd.app.App.DataPath
-            os.makedirs(jcd.app.App.DataPath)
+            os.makedirs(os.path.expanduser(jcd.app.App.DataPath))
         except OSError as exception:
             # folder exists
             if exception.errno == errno.EEXIST:
