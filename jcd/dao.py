@@ -418,6 +418,9 @@ class Version1Dao(object):
     def __init__(self, database):
         self._database = database
 
+    def has_sample_table(self):
+        return self._database.has_table(self.TableName, self.SchemaName)
+
     def find_all_dates(self):
         raise NotImplementedError()
 

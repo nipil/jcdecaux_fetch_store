@@ -354,4 +354,12 @@ class Import1Cmd(object):
         self._args = args
 
     def run(self):
-        print self._args.source
+        with jcd.app.SqliteDB(jcd.app.App.DbName) as app_db:
+            # attach version 1 database
+            app_db.attach_database("jcd.sqlite3",
+                jcd.dao.Version1Dao.SchemaName, self._args.source)
+            # check for version 1 data
+            dao_v1 = jcd.dao.Version1Dao(app_db)
+            if not dao_v1.has_sample_table():
+                raise jcd.app.JcdException(
+                    "Version 1 database is missing its sample table")
