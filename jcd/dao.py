@@ -438,12 +438,39 @@ class ShortSamplesDAO(object):
                     station_number = ?
                 ''' % (target_schema, self.TableNameArchive),
                 (sample[0], sample[1], sample[2]))
-            # TODO: verify actual removal
+            return req.rowcount
         except sqlite3.Error as error:
             print "%s: %s" % (type(error).__name__, error)
             raise jcd.app.JcdException(
                 "Database error while removing sample %i/%i/%i" % (
                     sample[0], sample[1], sample[2]))
+
+    def insert_samples(self, samples, target_schema):
+        # do not do anything if nothing is to be done
+        if len(samples) == 0:
+            return
+        try:
+            # add samples
+            req = self._database.connection.executemany(
+                '''
+                INSERT INTO %s.%s (
+                    timestamp,
+                    contract_id,
+                    station_number,
+                    available_bikes,
+                    available_bike_stands)
+                VALUES (?, ?, ?, ?, ?)
+                ''' % (target_schema, self.TableNameArchive), (samples))
+            # return number of inserted records
+            if len(samples) != req.rowcount:
+                raise jcd.app.JcdException(
+                    "Stored only %i of %i samples to target database" % (
+                        req.rowcount, len(samples)))
+        except sqlite3.Error as error:
+            print "%s: %s" % (type(error).__name__, error)
+            raise jcd.app.JcdException(
+                "Database error while inserting %i samples into %s.%s" % (
+                    len(samples), target_schema, self.TableNameArchive))
 
 # stored sample DAO
 class Version1Dao(object):

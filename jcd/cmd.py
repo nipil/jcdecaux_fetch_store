@@ -390,10 +390,9 @@ class Import1Cmd(object):
                 app_db.attach_database(db_filename, schema_name)
                 # getting earliest available sample from target database
                 earliest = short_dao.get_earliest_sample(schema_name)
-                print "Listing samples for date", date[0], "...",
+                print "Listing samples for date", date[0], "..."
                 samples = dao_v1.find_samples(date[0])
                 # deduplicate samples
-                skipped = 0
                 done = 0
                 last = None
                 for sample in samples:
@@ -417,14 +416,24 @@ class Import1Cmd(object):
                         last = sample
                         continue
                     # no change was detected
-                    skipped += 1
                     last = sample
-                    # TODO: periodically store kept samples
-                # TODO: flush remaining samples
-                # TODO: remove samples from version 1 database
+                    # periodically store kept samples
+                    if len(kept) > 1000:
+                        short_dao.insert_samples(kept, schema_name)
+                        kept.clear()
+                        # display some progress
+                        print done, "samples processed"
+                # flush remaining samples
+                if len(kept) > 0:
+                    short_dao.insert_samples(kept, schema_name)
+                    kept.clear()
                 # compare last with earliest to make sure there is a variation
-                if earliest is not None and earliest[3] == last[3] or earliest[4] == last[4]:
-                    short_dao.remove_sample(last, schema_name)
+                if earliest is not None and last is not None and (
+                    earliest[3] == last[3] or earliest[4] == last[4]):
+                    num_removed = short_dao.remove_sample(last, schema_name)
+                    if num_removed == 0:
+                        raise jcd.app.JcdException(
+                            "Could not remove last inserted sample")
+                # TODO: remove samples from version 1 database
                 # TODO: commit
                 # TODO: detach database
-                print "Pruned", skipped, "duplicates out of", done, ("(%i%%)" % (100*skipped/done)) if done > 0 else ""
