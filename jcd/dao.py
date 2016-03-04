@@ -499,7 +499,13 @@ class Version1Dao(object):
             raise jcd.app.JcdException(
                 "Database error listing available dates in version 1 data")
 
-    def find_samples(self, date):
+    def find_samples(self, date, earliest):
+        # make the request modular
+        skip_test = True
+        minstamp = 0
+        if earliest is not None:
+            skip_test = False
+            minstamp = earliest[0]
         try:
             req = self._database.connection.execute(
                 '''
@@ -511,13 +517,11 @@ class Version1Dao(object):
                 FROM %s AS c JOIN %s.%s AS s
                 ON c.contract_name = s.contract_name
                 WHERE s.timestamp >= strftime('%%s', date(:day)) AND
-                    s.timestamp < strftime('%%s', date(:day, "+1 day"))
+                    s.timestamp < strftime('%%s', date(:day, "+1 day")) AND
+                    (:skip_test OR s.timestamp < :minstamp)
                 ORDER BY c.contract_id, s.station_number, s.timestamp
-                ''' % (
-                    ContractsDAO.TableName,
-                    self.SchemaName,
-                    self.TableName),
-                    {"day": date})
+                ''' % (ContractsDAO.TableName, self.SchemaName, self.TableName),
+                    {"day": date, "skip_test": skip_test, "minstamp": minstamp})
             while True:
                 samples = req.fetchmany(1000)
                 if not samples:

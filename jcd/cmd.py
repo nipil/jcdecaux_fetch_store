@@ -391,7 +391,7 @@ class Import1Cmd(object):
                 # getting earliest available sample from target database
                 earliest = short_dao.get_earliest_sample(schema_name)
                 print "Listing samples for date", date[0], "..."
-                samples = dao_v1.find_samples(date[0])
+                samples = dao_v1.find_samples(date[0], earliest)
                 # deduplicate samples
                 done = 0
                 last = None
