@@ -386,6 +386,10 @@ class Import1Cmd(object):
                 created = short_dao.initialize_archived_table(db_filename)
                 if created:
                     print "Database", db_filename, "created"
+                # WARNING: attaching commits current transaction
+                app_db.attach_database(db_filename, schema_name)
+                # getting earliest available sample from target database
+                earliest = short_dao.get_earliest_sample(schema_name)
                 print "Listing samples for date", date[0], "...",
                 samples = dao_v1.find_samples(date[0])
                 # deduplicate samples
@@ -394,6 +398,9 @@ class Import1Cmd(object):
                 last = None
                 for sample in samples:
                     done += 1
+                    # do not load beyond what is already in the target database
+                    if earliest is not None and sample[0] >= earliest[0]:
+                        break
                     # handle the first
                     if last is None:
                         kept.append(sample)
@@ -415,6 +422,9 @@ class Import1Cmd(object):
                     # TODO: periodically store kept samples
                 # TODO: flush remaining samples
                 # TODO: remove samples from version 1 database
+                # compare last with earliest to make sure there is a variation
+                if earliest is not None and earliest[3] == last[3] or earliest[4] == last[4]:
+                    short_dao.remove_sample(last, schema_name)
                 # TODO: commit
                 # TODO: detach database
                 print "Pruned", skipped, "duplicates out of", done, ("(%i%%)" % (100*skipped/done)) if done > 0 else ""

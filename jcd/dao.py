@@ -409,6 +409,42 @@ class ShortSamplesDAO(object):
     def get_changed_count(self):
         return self._database.get_count(self.TableNameChanged)
 
+    def get_earliest_sample(self, target_schema):
+        try:
+            req = self._database.connection.execute(
+                '''
+                SELECT MIN(timestamp),
+                    contract_id,
+                    station_number,
+                    available_bikes,
+                    available_bike_stands
+                FROM %s.%s
+                ''' % (target_schema, self.TableNameArchive))
+            result = req.fetchone()
+            if result[0] is None:
+                return None
+            return result
+        except sqlite3.Error as error:
+            print "%s: %s" % (type(error).__name__, error)
+            raise jcd.app.JcdException("Database error getting earliest sample")
+
+    def remove_sample(self, sample, target_schema):
+        try:
+            req = self._database.connection.execute(
+                '''
+                DELETE FROM %s.%s
+                WHERE timestamp = ? AND
+                    contract_id = ? AND
+                    station_number = ?
+                ''' % (target_schema, self.TableNameArchive),
+                (sample[0], sample[1], sample[2]))
+            # TODO: verify actual removal
+        except sqlite3.Error as error:
+            print "%s: %s" % (type(error).__name__, error)
+            raise jcd.app.JcdException(
+                "Database error while removing sample %i/%i/%i" % (
+                    sample[0], sample[1], sample[2]))
+
 # stored sample DAO
 class Version1Dao(object):
 
