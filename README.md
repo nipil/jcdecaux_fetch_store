@@ -190,3 +190,19 @@ Example: on 2016-02-28 in France (GMT+1, DST not active on that day) the last mo
 Why do it that way ? JCDecaux API is providing information mainly for France, but for cities in other timezones too. Because of that, i deemed it more sensible to use UTC across the board when *collecting*, and delegate timezone (eventual) management when the collected data is *used*. Second reason, this should allow for clean handling of DST (daylight saving time) for the timezones using it (including France)
 
 This behaviour is consistent with version 1 way of handling time and dates.
+
+# FAQ #2: database size and contract/stations filtering
+
+Each daily database contains changes for every single contract and station for that day. As a consequence, the storage size is maximal.
+
+Depending on the day of the week, the weather, holiday or not, **each day** represents between **6-15 MBytes** of disk space.
+
+If you do not want the whole data database, it is possible. Just :
+- use to tool to collect everything daily
+- purge yesterday's databases of all un-needed data
+- or extract the data you want in a separate database
+
+That way, you can tailor the data to your needs, and of course store a longer history in the same disk size.
+
+I will add a command to do this when i have some time.
+
