@@ -535,3 +535,66 @@ class Version1Dao(object):
 
     def remove_samples(self, date):
         raise NotImplementedError()
+
+    def find_samples_filter(self, date_str, contract_id, station_number, maxtime, limit):
+        # modular query
+        params = {
+            "skip_date": True,
+            "date_value": 0,
+            "skip_contract": True,
+            "contract_value": 0,
+            "skip_station": True,
+            "station_value": 0,
+            "skip_maxtime": True,
+            "maxtime_value": 0,
+            "limit_squery": "",
+        }
+        # apply filters
+        if date_str is not None:
+            params["skip_date"] = False
+            params["date_value"] = date_str
+        if contract_id is not None:
+            params["skip_contract"] = False
+            params["contract_value"] = contract_id
+        if station_number is not None:
+            params["skip_station"] = False
+            params["station_value"] = station_number
+        if maxtime is not None:
+            params["skip_maxtime"] = False
+            params["maxtime_value"] = maxtime
+        # apply query limiting
+        if limit is not None:
+            params["limit_squery"] = " LIMIT %i" % limit
+        # do the query
+        try:
+            req = self._database.connection.execute(
+                '''
+                SELECT s.timestamp,
+                    c.contract_id,
+                    s.station_number,
+                    s.bike,
+                    s.empty
+                FROM %s AS c JOIN %s.%s AS s
+                ON c.contract_name = s.contract_name
+                WHERE
+                    (:skip_contract OR c.contract_id = :contract_value) AND
+                    (:skip_station OR s.station_number = :station_value) AND
+                    (:skip_maxtime OR s.timestamp < :maxtime_value) AND
+                    (:skip_date OR
+                        s.timestamp >= strftime('%%s', date(:date_value)) AND
+                        s.timestamp < strftime('%%s', date(:date_value, "+1 day")))
+                ORDER BY c.contract_id, s.station_number, s.timestamp
+                ''' % (ContractsDAO.TableName,
+                       self.SchemaName,
+                       self.TableName) +
+                params["limit_squery"], params)
+            while True:
+                samples = req.fetchmany(1000)
+                if not samples:
+                    break
+                for sample in samples:
+                    yield sample
+        except sqlite3.Error as error:
+            print "%s: %s" % (type(error).__name__, error)
+            raise jcd.app.JcdException(
+                "Database error listing available dates in version 1 data")
