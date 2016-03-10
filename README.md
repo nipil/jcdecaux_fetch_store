@@ -162,9 +162,9 @@ See `import_v1 --help` for import_v1 parameter list.
 
 `--source` defines the folder containing data to be imported (version 1 format). Defaults to version 1 default path, ie `~/.jcd`.
 
-`--sync` defines the [SQLite *pragma synchronous*](https://www.sqlite.org/pragma.html#pragma_synchronous) used for databases during the import operation. Values are `0,1,2,3` (=OFF/NORMAL/FULL/EXTRA). **Defaults to 0 (=OFF) for maximum speed.**. Please be advised to use higher values for a better resilience regarding eventual system crashes.
+`--sync` defines the [SQLite *pragma synchronous*](https://www.sqlite.org/pragma.html#pragma_synchronous) used for databases during the import operation. Values are `0, 1, 2, 3` (OFF, NORMAL, FULL, EXTRA). Defaults to 0 (=OFF) for maximum speed. *Please be advised to use higher values for a better resilience regarding eventual system crashes*.
 
-Sample output when using `--verbose`:
+Sample output:
 
 	Processing contract 1 station 19 date 2016-01-14... Committing. Stored 12 and removed 12
 	Processing contract 1 station 19 date 2016-01-15... Committing. Stored 12 and removed 12
