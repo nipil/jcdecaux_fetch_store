@@ -458,6 +458,14 @@ class Import1Cmd(object):
         # actually import samples
         self._import_target_samples()
 
+        # TODO: remove imported samples from v1 db
+
+        # commit transaction
+        self._app_db.connection.rollback()
+
+        # detach target daily db
+        self._detach_v2_daily_db()
+
     def run(self):
         with jcd.app.SqliteDB(jcd.app.App.DbName) as app_db:
             self._app_db = app_db
