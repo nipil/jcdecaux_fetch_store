@@ -478,10 +478,10 @@ class Import1Cmd(object):
         self._f_date_str = self._app_db.get_date_from_timestamp(target_sample[0])
         self._f_contract_id = target_sample[1]
         self._f_station_number = target_sample[2]
-        print "Processing samples for contract_id=%i station_number=%i date=%s" %(
+        print "Processing contract %i station %i date %s..." %(
             self._f_contract_id,
             self._f_station_number,
-            self._f_date_str)
+            self._f_date_str),
 
         # reset stats
         self._n_worked = 0
@@ -500,7 +500,7 @@ class Import1Cmd(object):
         self._remove_imported_source_samples()
 
         # display statistics
-        print "Committing changes:", self._n_worked, "removed, ", self._n_stored, "stored"
+        print "Committing. Stored", self._n_stored, "and removed", self._n_worked
 
         # commit transaction
         self._app_db.commit()
