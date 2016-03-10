@@ -365,6 +365,8 @@ class Import1Cmd(object):
         self._daily_schema_name = None
         self._last_sample = None
         self._kept_samples = None
+        self._n_worked = None
+        self._n_stored = None
 
     def _initialize(self):
         # prepare the dao for version 2 archived samples
@@ -415,8 +417,12 @@ class Import1Cmd(object):
             self._last_sample[4] != current_sample[4])
 
     def _store_kept_samples(self):
+        # store samples
         self._short_dao.insert_samples(
             self._kept_samples, self._daily_schema_name)
+        # count samples as stored
+        self._n_stored += len(self._kept_samples)
+        # clear samples buffer
         self._kept_samples.clear()
 
     def _import_target_samples(self):
@@ -432,11 +438,16 @@ class Import1Cmd(object):
         self._last_sample = next(samples, None)
         if self._last_sample is None:
             return 0
+        else:
+            # count sample as worked
+            self._n_worked += 1
 
         # there is some, do the deduplication
         self._kept_samples = collections.deque()
         self._kept_samples.append(self._last_sample)
         for sample in samples:
+            # count sample as worked
+            self._n_worked += 1
             # check for change
             if self._is_sample_changed(sample):
                 self._kept_samples.append(sample)
@@ -464,6 +475,10 @@ class Import1Cmd(object):
             self._f_station_number,
             self._f_date_str)
 
+        # reset stats
+        self._n_worked = 0
+        self._n_stored = 0
+
         # attach target database
         self._attach_v2_daily_db()
 
@@ -477,10 +492,13 @@ class Import1Cmd(object):
         self._remove_imported_source_samples()
 
         # commit transaction
-        self._app_db.connection.rollback()
+        self._app_db.commit()
 
         # detach target daily db
         self._detach_v2_daily_db()
+
+        # display statistics
+        print self._n_worked, "read, ", self._n_stored, "stored"
 
     def run(self):
         with jcd.app.SqliteDB(jcd.app.App.DbName) as app_db:
@@ -489,6 +507,6 @@ class Import1Cmd(object):
             while True:
                 sample = self._get_first_sample()
                 if sample is None:
+                    print "No sample found"
                     break
                 self._work(sample)
-                break
