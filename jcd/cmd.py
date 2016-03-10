@@ -375,9 +375,15 @@ class Import1Cmd(object):
         # prepare the dao for version 2 contracts
         self._contracts_dao = jcd.dao.ContractsDAO(self._app_db)
 
+        # modify synchronization for main db
+        self._app_db.set_synchronous_normal("main")
+
         # attach version 1 database
         self._app_db.attach_database(self.DefaultFile,
             jcd.dao.Version1Dao.SchemaName, self._args.source)
+
+        # modify synchronization for version 1 db
+        self._app_db.set_synchronous_normal(jcd.dao.Version1Dao.SchemaName)
 
         # check for version 1 data
         self._dao_v1 = jcd.dao.Version1Dao(self._app_db)
@@ -400,6 +406,8 @@ class Import1Cmd(object):
             print "Database", db_filename, "created"
         # WARNING: attaching commits current transaction
         self._app_db.attach_database(db_filename, self._daily_schema_name)
+        # modify synchronization for version 1 db
+        self._app_db.set_synchronous_normal(self._daily_schema_name)
 
     def _detach_v2_daily_db(self):
         # WARNING: detaching commits current transaction
@@ -491,14 +499,14 @@ class Import1Cmd(object):
         # remove imported samples from v1 db
         self._remove_imported_source_samples()
 
+        # display statistics
+        print "Committing changes:", self._n_worked, "removed, ", self._n_stored, "stored"
+
         # commit transaction
         self._app_db.commit()
 
         # detach target daily db
         self._detach_v2_daily_db()
-
-        # display statistics
-        print self._n_worked, "read, ", self._n_stored, "stored"
 
     def run(self):
         with jcd.app.SqliteDB(jcd.app.App.DbName) as app_db:
