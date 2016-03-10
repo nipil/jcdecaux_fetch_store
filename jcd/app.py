@@ -41,15 +41,18 @@ class JcdException(Exception):
 # manages access to the application database
 class SqliteDB(object):
 
-    def __init__(self, db_filename):
-        self._db_path = SqliteDB.get_full_path(db_filename)
+    def __init__(self, db_filename, path=None):
+        self._db_path = SqliteDB.get_full_path(db_filename, path)
         self.connection = None
         self._att_databases = {}
 
     @staticmethod
-    def get_full_path(filename):
-        return os.path.normpath(
-            "%s/%s" % (App.DataPath, filename))
+    def get_full_path(filename, path=None):
+        # use the current version path as default path
+        if path is None:
+            path = App.DataPath
+        return os.path.normpath(os.path.expanduser(
+            "%s/%s" % (path, filename)))
 
     def open(self):
         if self.connection is None:
@@ -86,14 +89,14 @@ class SqliteDB(object):
         if self.connection is not None:
             self.connection.execute("vacuum")
 
-    def has_table(self, name):
+    def has_table(self, name, schema="main"):
         try:
             req = self.connection.execute(
                 '''
                 SELECT count(*), name
-                FROM sqlite_master
+                FROM %s.sqlite_master
                 WHERE type = "table" AND name = ?
-                ''', (name, ))
+                ''' % schema, (name, ))
             count, name = req.fetchone()
             return count != 0
         except sqlite3.Error as error:
@@ -101,8 +104,8 @@ class SqliteDB(object):
             raise JcdException(
                 "Database error checking if table [%s] exists" % name)
 
-    def attach_database(self, file_name, schema_name):
-        file_path = SqliteDB.get_full_path(file_name)
+    def attach_database(self, file_name, schema_name, path=None):
+        file_path = SqliteDB.get_full_path(file_name, path)
         if schema_name in self._att_databases:
             raise JcdException(
                 "Database is already attached as schema [%s]" % schema_name)
@@ -145,6 +148,56 @@ class SqliteDB(object):
             print "%s: %s" % (type(error).__name__, error)
             raise JcdException(
                 "Database error while getting rowcount for [%s]" % (target, ))
+
+    def get_date_from_timestamp(self, timestamp):
+        try:
+            req = self.connection.execute(
+                '''
+                SELECT date(?, 'unixepoch')
+                ''', (timestamp, ))
+            res = req.fetchone()
+            return res[0]
+        except sqlite3.Error as error:
+            print "%s: %s" % (type(error).__name__, error)
+            raise JcdException(
+                "Database error while converting timestamp [%s]" % (timestamp, ))
+
+    def get_synchronous(self, schema_name):
+        try:
+            req = self.connection.execute(
+                '''
+                PRAGMA %s.synchronous
+                ''' % schema_name)
+            res = req.fetchone()
+            return res[0]
+        except sqlite3.Error as error:
+            print "%s: %s" % (type(error).__name__, error)
+            raise JcdException(
+                "Database error while getting synchronous pragma")
+
+    def set_synchronous(self, schema_name, value):
+        # see https://www.sqlite.org/pragma.html#pragma_synchronous
+        try:
+            self.connection.execute(
+                '''
+                PRAGMA %s.synchronous=%i
+                ''' % (schema_name, value))
+        except sqlite3.Error as error:
+            print "%s: %s" % (type(error).__name__, error)
+            raise JcdException(
+                "Database error while setting synchronous pragma")
+
+    def set_synchronous_off(self, schema_name):
+        self.set_synchronous(schema_name, 0)
+
+    def set_synchronous_normal(self, schema_name):
+        self.set_synchronous(schema_name, 1)
+
+    def set_synchronous_full(self, schema_name):
+        self.set_synchronous(schema_name, 2)
+
+    def set_synchronous_extra(self, schema_name):
+        self.set_synchronous(schema_name, 3)
 
 # access jcdecaux web api
 class ApiAccess(object):
@@ -292,16 +345,34 @@ class App(object):
             help='do a full acquisition cycle',
             description='Fetch and store according to configuration'
         )
+        # import v1 command
+        import_v1 = top_command.add_parser(
+            'import_v1',
+            help='import data from version 1',
+            description='Analize and import data from the version 1'
+        )
+        import_v1.add_argument(
+            '--source',
+            help='directory of version 1 data to import (default: %s)' % jcd.cmd.Import1Cmd.DefaultPath,
+            default=jcd.cmd.Import1Cmd.DefaultPath
+        )
+        import_v1.add_argument(
+            '--sync',
+            help='sqlite synchronous pragma: 0/1/2/3 (default: 0)',
+            type=int,
+            choices=range(0, 4),
+            default=0
+        )
 
     def run(self):
         try:
             # parse arguments
             args = self._parser.parse_args()
             # consume data-path argument
-            App.DataPath = os.path.expanduser(args.datadir)
+            App.DataPath = args.datadir
             del args.datadir
             # consume db name argument
-            App.DbName = os.path.expanduser(args.dbname)
+            App.DbName = args.dbname
             del args.dbname
             # consume verbose
             App.Verbose = args.verbose
@@ -344,3 +415,8 @@ class App(object):
     def cron(args):
         cron = jcd.cmd.CronCmd(args)
         cron.run()
+
+    @staticmethod
+    def import_v1(args):
+        import1 = jcd.cmd.Import1Cmd(args)
+        import1.run()

@@ -10,6 +10,8 @@ Pyhton 2.7, with python-requests (not too antique version) and python-pysqlite2 
 
 If you want to use another path, either use the move the default one and create a symlink to it in its place, or use the `--datadir` parameter (see below) *consistently across all your commands*.
 
+The default path for version 2 is `~/.jcd_v2/`.
+
 # Upgrade path from version 1
 
 Version 2 is incompatible with version 1, yet they can of course co-exist **in separate folders**.
@@ -25,9 +27,8 @@ Please migrate as follows :
 - un-configure all cron jobs related to version 1
 
 The following can be done anytime later :
-- use `utils/import_1to2.py` to import version 1 data (**Not Yet Implemented**)
-- archive version 1 data if you want to rollback
-- remove version 1 data
+- use (v2.1+) `import_v1` command to import version 1 data
+- archive version 1 data if you want to or remove it
 
 I think it is straightforward but it still deserved to be explained.
 
@@ -52,9 +53,9 @@ Cron operation (you can of course `-v` to diagnose problems manually)
 
 See `--help` for full global parameter (and their defaults) and command list.
 
-`--verbose` displays output for each operation. By default `jcdtool.py` is mute when all goes right. There is a single exception to this rule : "config" command with no settings displays the current configuration unconditionnaly of this parameter.
+`--verbose` displays output for each operation. By default `jcdtool.py` is mute when all goes right. There are two exceptions to this rule : "config" command with no settings displays the current configuration unconditionnaly of this parameter ; and the "import_v1" command which always displays progress.
 
-`--datadir` uses the specified folder instead of the default path.
+`--datadir` uses the specified folder instead of the default path
 
 `--dbname` choose the name for main db filename (quite useless, but why not)
 
@@ -154,6 +155,22 @@ Sample output when using `--verbose`:
 	Fetching a single station [9] of contract [Nantes] ...
 	Station name is [00009-GUEPIN]
 	API TEST SUCCESS
+
+## import_v1
+
+See `import_v1 --help` for import_v1 parameter list.
+
+`--source` defines the folder containing data to be imported (version 1 format). Defaults to version 1 default path, ie `~/.jcd`.
+
+`--sync` defines the [SQLite *pragma synchronous*](https://www.sqlite.org/pragma.html#pragma_synchronous) used for databases during the import operation. Values are `0,1,2,3` (=OFF/NORMAL/FULL/EXTRA). **Defaults to 0 (=OFF) for maximum speed.**. Please be advised to use higher values for a better resilience regarding eventual system crashes.
+
+Sample output when using `--verbose`:
+
+	Processing contract 1 station 19 date 2016-01-14... Committing. Stored 12 and removed 12
+	Processing contract 1 station 19 date 2016-01-15... Committing. Stored 12 and removed 12
+	Processing contract 1 station 19 date 2016-01-16... Committing. Stored 8 and removed 8
+	Processing contract 1 station 19 date 2016-01-17... Committing. Stored 1 and removed 1
+	Processing contract 1 station 19 date 2016-01-18... Committing. Stored 17 and removed 17
 
 # Return value
 
