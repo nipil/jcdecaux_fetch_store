@@ -409,8 +409,8 @@ class Import1Cmd(object):
             self._last_sample[4] != current_sample[4])
 
     def _store_kept_samples(self):
-        print "storing", len(self._kept_samples), "kept samples"
-        # DEBUG
+        self._short_dao.insert_samples(
+            self._kept_samples, self._daily_schema_name)
         self._kept_samples.clear()
 
     def _import_target_samples(self):
