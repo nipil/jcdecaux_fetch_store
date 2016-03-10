@@ -395,6 +395,10 @@ class Import1Cmd(object):
         # WARNING: attaching commits current transaction
         self._app_db.attach_database(db_filename, self._daily_schema_name)
 
+    def _detach_v2_daily_db(self):
+        # WARNING: detaching commits current transaction
+        self._app_db.detach_database(self._daily_schema_name)
+
     def _find_earliest_target_sample(self):
         # getting earliest available sample from target database
         self._f_earliest_timestamp = self._short_dao.get_earliest_sample(
