@@ -502,7 +502,6 @@ class Version1Dao(object):
             print "%s: %s" % (type(error).__name__, error)
             raise jcd.app.JcdException(
                 "Database error while deleting samples from version 1 data")
-        raise NotImplementedError()
 
     def find_samples_filter(self, date_str, contract_id, station_number, maxtime, limit):
         # modular query
