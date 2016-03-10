@@ -356,6 +356,13 @@ class App(object):
             help='directory of version 1 data to import (default: %s)' % jcd.cmd.Import1Cmd.DefaultPath,
             default=jcd.cmd.Import1Cmd.DefaultPath
         )
+        import_v1.add_argument(
+            '--sync',
+            help='sqlite synchronous pragma: 0/1/2/3 (default: 0)',
+            type=int,
+            choices=range(0, 4),
+            default=0
+        )
 
     def run(self):
         try:

@@ -376,14 +376,14 @@ class Import1Cmd(object):
         self._contracts_dao = jcd.dao.ContractsDAO(self._app_db)
 
         # modify synchronization for main db
-        self._app_db.set_synchronous_normal("main")
+        self._app_db.set_synchronous("main", self._args.sync)
 
         # attach version 1 database
         self._app_db.attach_database(self.DefaultFile,
             jcd.dao.Version1Dao.SchemaName, self._args.source)
 
         # modify synchronization for version 1 db
-        self._app_db.set_synchronous_normal(jcd.dao.Version1Dao.SchemaName)
+        self._app_db.set_synchronous(jcd.dao.Version1Dao.SchemaName, self._args.sync)
 
         # check for version 1 data
         self._dao_v1 = jcd.dao.Version1Dao(self._app_db)
@@ -407,7 +407,7 @@ class Import1Cmd(object):
         # WARNING: attaching commits current transaction
         self._app_db.attach_database(db_filename, self._daily_schema_name)
         # modify synchronization for version 1 db
-        self._app_db.set_synchronous_normal(self._daily_schema_name)
+        self._app_db.set_synchronous(self._daily_schema_name, self._args.sync)
 
     def _detach_v2_daily_db(self):
         # WARNING: detaching commits current transaction
