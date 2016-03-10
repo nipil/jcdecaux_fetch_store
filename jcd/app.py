@@ -149,6 +149,19 @@ class SqliteDB(object):
             raise JcdException(
                 "Database error while getting rowcount for [%s]" % (target, ))
 
+    def get_date_from_timestamp(self, timestamp):
+        try:
+            req = self.connection.execute(
+                '''
+                SELECT date(?, 'unixepoch')
+                ''', (timestamp, ))
+            res = req.fetchone()
+            return res[0]
+        except sqlite3.Error as error:
+            print "%s: %s" % (type(error).__name__, error)
+            raise JcdException(
+                "Database error while converting timestamp [%s]" % (timestamp, ))
+
 # access jcdecaux web api
 class ApiAccess(object):
 
