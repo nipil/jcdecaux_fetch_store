@@ -479,11 +479,13 @@ class ShortSamplesDAO(object):
                     available_bike_stands)
                 VALUES (?, ?, ?, ?, ?)
                 ''' % (target_schema, self.TableNameArchive), (samples))
-            # return number of inserted records
+            # verify insertion
             if len(samples) != req.rowcount:
                 raise jcd.app.JcdException(
                     "Stored only %i of %i samples to target database" % (
                         req.rowcount, len(samples)))
+            # return number of inserted records
+            return req.rowcount
         except sqlite3.Error as error:
             print "%s: %s" % (type(error).__name__, error)
             raise jcd.app.JcdException(
