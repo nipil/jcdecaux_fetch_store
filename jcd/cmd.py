@@ -354,8 +354,118 @@ class Import1Cmd(object):
 
     def __init__(self, args):
         self._args = args
+        self._app_db = None
+        self._short_dao = None
+        self._dao_v1 = None
+        self._f_date = None
+        self._f_contract = None
+        self._f_station = None
+        self._f_earliest_timestamp = None
+        self._daily_schema_name = None
+        self._last_sample = None
+        self._kept_samples = None
+
+    def _initialize(self):
+        # prepare the dao for version 2 data
+        self._short_dao = jcd.dao.ShortSamplesDAO(self._app_db)
+
+        # attach version 1 database
+        self._app_db.attach_database(self.DefaultFile,
+            jcd.dao.Version1Dao.SchemaName, self._args.source)
+
+        # check for version 1 data
+        self._dao_v1 = jcd.dao.Version1Dao(self._app_db)
+        if not self._dao_v1.has_sample_table():
+            raise jcd.app.JcdException(
+                "Version 1 database is missing its sample table")
+
+    def _get_first_sample(self):
+        # search for data to import
+        samples = self._dao_v1.find_samples_filter(None, None, None, None, 1)
+        return next(samples, None)
+
+    def _attach_v2_daily_db(self):
+        # create, initialize databases as necessary
+        self._daily_schema_name = self._short_dao.get_schema_name(self._f_date)
+        db_filename = self._short_dao.get_db_file_name(self._daily_schema_name)
+        # prepare archive storage if needed
+        created = self._short_dao.initialize_archived_table(db_filename)
+        if created:
+            print "Database", db_filename, "created"
+        # WARNING: attaching commits current transaction
+        self._app_db.attach_database(db_filename, self._daily_schema_name)
+
+    def _find_earliest_target_sample(self):
+        # getting earliest available sample from target database
+        self._f_earliest_timestamp = self._short_dao.get_earliest_sample(
+            self._daily_schema_name, self._f_contract, self._f_station)
+
+    def _is_sample_changed(self, current_sample):
+        return (self._last_sample[3] != current_sample[3] or
+            self._last_sample[4] != current_sample[4])
+
+    def _store_kept_samples(self):
+        print "storing", len(self._kept_samples), "kept samples"
+        # DEBUG
+        self._kept_samples.clear()
+
+    def _import_target_samples(self):
+        # search for data to import
+        samples = self._dao_v1.find_samples_filter(
+            self._f_date,
+            self._f_contract,
+            self._f_station,
+            self._f_earliest_timestamp,
+            None)
+
+        # check if there is any actual data
+        self._last_sample = next(samples, None)
+        if self._last_sample is None:
+            return 0
+
+        # there is some, do the deduplication
+        self._kept_samples = collections.deque()
+        self._kept_samples.append(self._last_sample)
+        for sample in samples:
+            # check for change
+            if self._is_sample_changed(sample):
+                self._kept_samples.append(sample)
+                self._last_sample = sample
+            # periodically store into target db
+            if len(self._kept_samples) > 1000:
+                self._store_kept_samples()
+        # store remaining samples
+        self._store_kept_samples()
+
+    def _work(self, target_sample):
+        # extract working data
+        self._f_date = self._app_db.get_date_from_timestamp(target_sample[0])
+        self._f_contract = target_sample[1]
+        self._f_station = target_sample[2]
+        print "Processing samples for contract_id=%i station_number=%i date=%s" %(
+            self._f_contract, self._f_station, self._f_date)
+
+        # attach target database
+        self._attach_v2_daily_db()
+
+        # find maximum target timestamp, to limit import
+        self._find_earliest_target_sample()
+
+        # actually import samples
+        self._import_target_samples()
 
     def run(self):
+        with jcd.app.SqliteDB(jcd.app.App.DbName) as app_db:
+            self._app_db = app_db
+            self._initialize()
+            while True:
+                sample = self._get_first_sample()
+                if sample is None:
+                    break
+                self._work(sample)
+                break
+
+    def run_old(self):
         print ("INFORMATION:\n"
             "- This operation can be very long, depending of your data. Be patient !\n"
             "- Interrupting with CTRL-C will interrupt between days, not right away, do not panic :-)\n"
@@ -389,7 +499,7 @@ class Import1Cmd(object):
                 # WARNING: attaching commits current transaction
                 app_db.attach_database(db_filename, schema_name)
                 # getting earliest available sample from target database
-                earliest = short_dao.get_earliest_sample(schema_name)
+                earliest = short_dao.get_earliest_sample_old(schema_name)
                 print "Listing samples for date", date[0], "..."
                 samples = dao_v1.find_samples(date[0], earliest)
                 # deduplicate samples
