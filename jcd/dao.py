@@ -409,7 +409,7 @@ class ShortSamplesDAO(object):
     def get_changed_count(self):
         return self._database.get_count(self.TableNameChanged)
 
-    def get_earliest_sample(self, target_schema, f_contract, f_station):
+    def get_earliest_timestamp(self, target_schema, f_contract, f_station):
         try:
             req = self._database.connection.execute(
                 '''
@@ -420,9 +420,7 @@ class ShortSamplesDAO(object):
                 ''' % (target_schema, self.TableNameArchive),
                 (f_contract, f_station))
             result = req.fetchone()
-            if result[0] is None:
-                return None
-            return result
+            return result[0]
         except sqlite3.Error as error:
             print "%s: %s" % (type(error).__name__, error)
             raise jcd.app.JcdException("Database error getting earliest sample")

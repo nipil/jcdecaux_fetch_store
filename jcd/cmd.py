@@ -401,7 +401,7 @@ class Import1Cmd(object):
 
     def _find_earliest_target_sample(self):
         # getting earliest available sample from target database
-        self._f_earliest_timestamp = self._short_dao.get_earliest_sample(
+        self._f_earliest_timestamp = self._short_dao.get_earliest_timestamp(
             self._daily_schema_name, self._f_contract, self._f_station)
 
     def _is_sample_changed(self, current_sample):
