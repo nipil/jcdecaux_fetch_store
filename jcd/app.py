@@ -162,6 +162,43 @@ class SqliteDB(object):
             raise JcdException(
                 "Database error while converting timestamp [%s]" % (timestamp, ))
 
+    def get_synchronous(self, schema_name):
+        try:
+            req = self.connection.execute(
+                '''
+                PRAGMA %s.synchronous
+                ''' % schema_name)
+            res = req.fetchone()
+            return res[0]
+        except sqlite3.Error as error:
+            print "%s: %s" % (type(error).__name__, error)
+            raise JcdException(
+                "Database error while getting synchronous pragma")
+
+    def set_synchronous(self, schema_name, value):
+        # see https://www.sqlite.org/pragma.html#pragma_synchronous
+        try:
+            self.connection.execute(
+                '''
+                PRAGMA %s.synchronous=%i
+                ''' % (schema_name, value))
+        except sqlite3.Error as error:
+            print "%s: %s" % (type(error).__name__, error)
+            raise JcdException(
+                "Database error while setting synchronous pragma")
+
+    def set_synchronous_off(self, schema_name):
+        self.set_synchronous(schema_name, 0)
+
+    def set_synchronous_normal(self, schema_name):
+        self.set_synchronous(schema_name, 1)
+
+    def set_synchronous_full(self, schema_name):
+        self.set_synchronous(schema_name, 2)
+
+    def set_synchronous_extra(self, schema_name):
+        self.set_synchronous(schema_name, 3)
+
 # access jcdecaux web api
 class ApiAccess(object):
 
