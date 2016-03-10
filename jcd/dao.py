@@ -425,42 +425,6 @@ class ShortSamplesDAO(object):
             print "%s: %s" % (type(error).__name__, error)
             raise jcd.app.JcdException("Database error getting earliest sample")
 
-    def get_earliest_sample_old(self, target_schema):
-        try:
-            req = self._database.connection.execute(
-                '''
-                SELECT MIN(timestamp),
-                    contract_id,
-                    station_number,
-                    available_bikes,
-                    available_bike_stands
-                FROM %s.%s
-                ''' % (target_schema, self.TableNameArchive))
-            result = req.fetchone()
-            if result[0] is None:
-                return None
-            return result
-        except sqlite3.Error as error:
-            print "%s: %s" % (type(error).__name__, error)
-            raise jcd.app.JcdException("Database error getting earliest sample")
-
-    def remove_sample(self, sample, target_schema):
-        try:
-            req = self._database.connection.execute(
-                '''
-                DELETE FROM %s.%s
-                WHERE timestamp = ? AND
-                    contract_id = ? AND
-                    station_number = ?
-                ''' % (target_schema, self.TableNameArchive),
-                (sample[0], sample[1], sample[2]))
-            return req.rowcount
-        except sqlite3.Error as error:
-            print "%s: %s" % (type(error).__name__, error)
-            raise jcd.app.JcdException(
-                "Database error while removing sample %i/%i/%i" % (
-                    sample[0], sample[1], sample[2]))
-
     def insert_samples(self, samples, target_schema):
         # do not do anything if nothing is to be done
         if len(samples) == 0:
@@ -501,55 +465,6 @@ class Version1Dao(object):
 
     def has_sample_table(self):
         return self._database.has_table(self.TableName, self.SchemaName)
-
-    def find_all_dates(self):
-        try:
-            req = self._database.connection.execute(
-                '''
-                SELECT DISTINCT(DATE(timestamp,'unixepoch')) AS day
-                FROM %s.%s
-                ORDER BY day
-                ''' % (self.SchemaName, self.TableName))
-            days = req.fetchall()
-            return days
-        except sqlite3.Error as error:
-            print "%s: %s" % (type(error).__name__, error)
-            raise jcd.app.JcdException(
-                "Database error listing available dates in version 1 data")
-
-    def find_samples(self, date, earliest):
-        # make the request modular
-        skip_test = True
-        minstamp = 0
-        if earliest is not None:
-            skip_test = False
-            minstamp = earliest[0]
-        try:
-            req = self._database.connection.execute(
-                '''
-                SELECT s.timestamp,
-                    c.contract_id,
-                    s.station_number,
-                    s.bike,
-                    s.empty
-                FROM %s AS c JOIN %s.%s AS s
-                ON c.contract_name = s.contract_name
-                WHERE s.timestamp >= strftime('%%s', date(:day)) AND
-                    s.timestamp < strftime('%%s', date(:day, "+1 day")) AND
-                    (:skip_test OR s.timestamp < :minstamp)
-                ORDER BY c.contract_id, s.station_number, s.timestamp
-                ''' % (ContractsDAO.TableName, self.SchemaName, self.TableName),
-                    {"day": date, "skip_test": skip_test, "minstamp": minstamp})
-            while True:
-                samples = req.fetchmany(1000)
-                if not samples:
-                    break
-                for sample in samples:
-                    yield sample
-        except sqlite3.Error as error:
-            print "%s: %s" % (type(error).__name__, error)
-            raise jcd.app.JcdException(
-                "Database error listing available dates in version 1 data")
 
     def remove_samples(self, date):
         raise NotImplementedError()
