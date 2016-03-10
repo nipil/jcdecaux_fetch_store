@@ -356,18 +356,22 @@ class Import1Cmd(object):
         self._args = args
         self._app_db = None
         self._short_dao = None
+        self._contracts_dao = None
         self._dao_v1 = None
-        self._f_date = None
-        self._f_contract = None
-        self._f_station = None
+        self._f_date_str = None
+        self._f_contract_id = None
+        self._f_station_number = None
         self._f_earliest_timestamp = None
         self._daily_schema_name = None
         self._last_sample = None
         self._kept_samples = None
 
     def _initialize(self):
-        # prepare the dao for version 2 data
+        # prepare the dao for version 2 archived samples
         self._short_dao = jcd.dao.ShortSamplesDAO(self._app_db)
+
+        # prepare the dao for version 2 contracts
+        self._contracts_dao = jcd.dao.ContractsDAO(self._app_db)
 
         # attach version 1 database
         self._app_db.attach_database(self.DefaultFile,
@@ -386,7 +390,7 @@ class Import1Cmd(object):
 
     def _attach_v2_daily_db(self):
         # create, initialize databases as necessary
-        self._daily_schema_name = self._short_dao.get_schema_name(self._f_date)
+        self._daily_schema_name = self._short_dao.get_schema_name(self._f_date_str)
         db_filename = self._short_dao.get_db_file_name(self._daily_schema_name)
         # prepare archive storage if needed
         created = self._short_dao.initialize_archived_table(db_filename)
@@ -402,7 +406,9 @@ class Import1Cmd(object):
     def _find_earliest_target_sample(self):
         # getting earliest available sample from target database
         self._f_earliest_timestamp = self._short_dao.get_earliest_timestamp(
-            self._daily_schema_name, self._f_contract, self._f_station)
+            self._daily_schema_name,
+            self._f_contract_id,
+            self._f_station_number)
 
     def _is_sample_changed(self, current_sample):
         return (self._last_sample[3] != current_sample[3] or
@@ -416,9 +422,9 @@ class Import1Cmd(object):
     def _import_target_samples(self):
         # search for data to import
         samples = self._dao_v1.find_samples_filter(
-            self._f_date,
-            self._f_contract,
-            self._f_station,
+            self._f_date_str,
+            self._f_contract_id,
+            self._f_station_number,
             self._f_earliest_timestamp,
             None)
 
@@ -442,16 +448,21 @@ class Import1Cmd(object):
         self._store_kept_samples()
 
     def _remove_imported_source_samples(self):
+        contract_name = self._contracts_dao.get_contract_name(self._f_contract_id)
         self._dao_v1.remove_samples(
-            self._f_date, self._f_contract, self._f_station)
+            self._f_date_str,
+            contract_name,
+            self._f_station_number)
 
     def _work(self, target_sample):
         # extract working data
-        self._f_date = self._app_db.get_date_from_timestamp(target_sample[0])
-        self._f_contract = target_sample[1]
-        self._f_station = target_sample[2]
+        self._f_date_str = self._app_db.get_date_from_timestamp(target_sample[0])
+        self._f_contract_id = target_sample[1]
+        self._f_station_number = target_sample[2]
         print "Processing samples for contract_id=%i station_number=%i date=%s" %(
-            self._f_contract, self._f_station, self._f_date)
+            self._f_contract_id,
+            self._f_station_number,
+            self._f_date_str)
 
         # attach target database
         self._attach_v2_daily_db()

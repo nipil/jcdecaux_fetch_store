@@ -165,6 +165,20 @@ class ContractsDAO(object):
             print "%s: %s" % (type(error).__name__, error)
             raise jcd.app.JcdException("Database error while checking contracts refresh")
 
+    def get_contract_name(self, contract_id):
+        try:
+            req = self._database.connection.execute(
+                '''
+                SELECT contract_name
+                FROM contracts
+                WHERE contract_id = ?
+                ''', (contract_id,))
+            result = req.fetchone()
+            return result[0]
+        except sqlite3.Error as error:
+            print "%s: %s" % (type(error).__name__, error)
+            raise jcd.app.JcdException("Database error while getting contract name")
+
 # settings table
 class FullSamplesDAO(object):
 
@@ -466,10 +480,10 @@ class Version1Dao(object):
     def has_sample_table(self):
         return self._database.has_table(self.TableName, self.SchemaName)
 
-    def remove_samples(self, date_str, contract_id, station_number):
+    def remove_samples(self, date_str, contract_name, station_number):
         params = {
             "date_value": date_str,
-            "contract_value": contract_id,
+            "contract_value": contract_name,
             "station_value": station_number,
         }
         try:
@@ -477,13 +491,12 @@ class Version1Dao(object):
                 '''
                 DELETE FROM %s.%s
                 WHERE
-                    (contract_id = :contract_value) AND
+                    (contract_name = :contract_value) AND
                     (station_number = :station_value) AND
                     (timestamp >= strftime('%%s', date(:date_value)) AND
                         timestamp < strftime('%%s', date(:date_value, "+1 day")))
                 ''' % (self.SchemaName, self.TableName),
                 params)
-            print req.rowcount
             return req.rowcount
         except sqlite3.Error as error:
             print "%s: %s" % (type(error).__name__, error)
