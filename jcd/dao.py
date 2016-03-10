@@ -466,7 +466,29 @@ class Version1Dao(object):
     def has_sample_table(self):
         return self._database.has_table(self.TableName, self.SchemaName)
 
-    def remove_samples(self, date):
+    def remove_samples(self, date_str, contract_id, station_number):
+        params = {
+            "date_value": date_str,
+            "contract_value": contract_id,
+            "station_value": station_number,
+        }
+        try:
+            req = self._database.connection.execute(
+                '''
+                DELETE FROM %s.%s
+                WHERE
+                    (contract_id = :contract_value) AND
+                    (station_number = :station_value) AND
+                    (timestamp >= strftime('%%s', date(:date_value)) AND
+                        timestamp < strftime('%%s', date(:date_value, "+1 day")))
+                ''' % (self.SchemaName, self.TableName),
+                params)
+            print req.rowcount
+            return req.rowcount
+        except sqlite3.Error as error:
+            print "%s: %s" % (type(error).__name__, error)
+            raise jcd.app.JcdException(
+                "Database error while deleting samples from version 1 data")
         raise NotImplementedError()
 
     def find_samples_filter(self, date_str, contract_id, station_number, maxtime, limit):

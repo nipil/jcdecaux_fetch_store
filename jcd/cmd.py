@@ -441,6 +441,10 @@ class Import1Cmd(object):
         # store remaining samples
         self._store_kept_samples()
 
+    def _remove_imported_source_samples(self):
+        self._dao_v1.remove_samples(
+            self._f_date, self._f_contract, self._f_station)
+
     def _work(self, target_sample):
         # extract working data
         self._f_date = self._app_db.get_date_from_timestamp(target_sample[0])
@@ -458,7 +462,8 @@ class Import1Cmd(object):
         # actually import samples
         self._import_target_samples()
 
-        # TODO: remove imported samples from v1 db
+        # remove imported samples from v1 db
+        self._remove_imported_source_samples()
 
         # commit transaction
         self._app_db.connection.rollback()
