@@ -223,3 +223,8 @@ That way, you can tailor the data to your needs, and of course store a longer hi
 
 I will add a command to do this when i have some time.
 
+# FAQ #3: "No sample found" when importing from version 1
+
+Importing from version 1 requires that the version 2 already knows available contracts (to translate `contract_name` in v1 with `contract_id` in v2)
+
+As a consequence, setup your version 2 (apikey) and run `fetch --contracts` to populate the contracts data. Then, retry `import_v1`.
