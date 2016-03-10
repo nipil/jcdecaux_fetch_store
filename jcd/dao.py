@@ -547,7 +547,7 @@ class Version1Dao(object):
             "station_value": 0,
             "skip_maxtime": True,
             "maxtime_value": 0,
-            "limit_squery": "",
+            "limit_query": -1,
         }
         # apply filters
         if date_str is not None:
@@ -564,7 +564,7 @@ class Version1Dao(object):
             params["maxtime_value"] = maxtime
         # apply query limiting
         if limit is not None:
-            params["limit_squery"] = " LIMIT %i" % limit
+            params["limit_query"] = limit
         # do the query
         try:
             req = self._database.connection.execute(
@@ -584,10 +584,11 @@ class Version1Dao(object):
                         s.timestamp >= strftime('%%s', date(:date_value)) AND
                         s.timestamp < strftime('%%s', date(:date_value, "+1 day")))
                 ORDER BY c.contract_id, s.station_number, s.timestamp
+                LIMIT :limit_query
                 ''' % (ContractsDAO.TableName,
                        self.SchemaName,
-                       self.TableName) +
-                params["limit_squery"], params)
+                       self.TableName),
+                params)
             while True:
                 samples = req.fetchmany(1000)
                 if not samples:
