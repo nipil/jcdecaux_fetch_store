@@ -173,10 +173,10 @@ class ApiAccess(object):
     def _parse_reply(reply_text):
         try:
             reply_json = json.loads(reply_text)
-        except ValueError as error:
+        except (ValueError, OverflowError, TypeError) as error:
             print "%s: %s" % (type(error).__name__, error)
             raise JcdException(
-                "Could not parse JSON reply : %s" % (reply_text, ))
+                "Could not parse JSON reply :\n%s" % (reply_text, ))
         if isinstance(reply_json, dict) and reply_json.has_key("error"):
             error = reply_json["error"]
             raise JcdException(
