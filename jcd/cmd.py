@@ -535,12 +535,12 @@ class Import1Cmd(object):
             if error.errno != errno.ENOENT:
                 raise
 
-    @staticmethod
-    def _flush_samples(date_str, data):
+    def _flush_samples(self, date_str, data):
         filename = Import1Cmd._get_csv_name(date_str)
         with open(filename, 'ab') as csvfile:
             writer = csv.writer(csvfile)
             writer.writerows(data)
+            self._n_stored += len(data)
             data.clear()
 
     @staticmethod
@@ -616,17 +616,25 @@ class Import1Cmd(object):
         return
 
     def _extract_deduplicate_data(self):
-        n = 0
-        t = 0
+        print "Reading all version 1 data (this will take a while)"
+        self._n_worked = 0
+        self._n_stored = 0
+        flush_counter = 0
+        # read all samples on input
         for sample in self._dao_v1.list_samples():
-            n += 1
-            t += 1
+            self._n_worked += 1
+            flush_counter += 1
             self._work_sample(sample)
-            if t > 1000:
-                t = 0
+            # periodic flush
+            if flush_counter > 1000:
+                flush_counter = 0
                 sys.stdout.write(".")
                 sys.stdout.flush()
+        # final flush
         self._flush_all()
+        # result
+        print "Done."
+        print self._n_worked, "samples read and", self._n_stored, "extracted to CSV files"
 
     def _import_data(self, date_str, earliest_timestamp):
         reader = self._load_samples(date_str)
