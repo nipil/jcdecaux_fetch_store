@@ -23,6 +23,8 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 
+import csv
+import sys
 import time
 import errno
 import shutil
@@ -367,6 +369,7 @@ class Import1Cmd(object):
         self._kept_samples = None
         self._n_worked = None
         self._n_stored = None
+        self._data = dict()
 
     def _initialize(self):
         # prepare the dao for version 2 archived samples
@@ -508,7 +511,7 @@ class Import1Cmd(object):
         # detach target daily db
         self._detach_v2_daily_db()
 
-    def run(self):
+    def run_old(self):
         with jcd.app.SqliteDB(jcd.app.App.DbName) as app_db:
             self._app_db = app_db
             self._initialize()
@@ -518,3 +521,89 @@ class Import1Cmd(object):
                     print "No sample found"
                     break
                 self._work(sample)
+
+    @staticmethod
+    def _flush_samples(date, data):
+        with open('%s.csv' % date, 'ab') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerows(data)
+            data.clear()
+
+    def _flush_all(self):
+        for date_str, date_info in self._data.iteritems():
+            self._flush_samples(date_str, date_info["kept"])
+
+    def _work_sample(self, sample_raw):
+        # manage dates
+        timestamp = sample_raw[0]
+        date = sample_raw[1]
+        contract_id = sample_raw[2]
+        station_number = sample_raw[3]
+        bikes = sample_raw[4]
+        slots = sample_raw[5]
+        sample = timestamp, contract_id, station_number, bikes, slots
+
+        # manage structure
+        if date not in self._data:
+            self._data[date] = {
+                "kept": collections.deque(),
+                "contracts": dict()
+            }
+        date_info = self._data[date]
+
+        # flush samples if required
+        kept = date_info["kept"]
+        if len(kept) >= 1000:
+            self._flush_samples(date, kept)
+
+        # manage contracts
+        contracts = date_info["contracts"]
+        if contract_id not in contracts:
+            # will contain all stations by number
+            contracts[contract_id] = {
+                "stations": dict()
+            }
+        contract_info = contracts[contract_id]
+
+        # manage stations
+        stations = contract_info["stations"]
+        if station_number not in stations:
+            stations[station_number] = {
+                "last": None
+            }
+        station_info = stations[station_number]
+
+        # manage first sample
+        last = station_info["last"]
+        if last is None:
+            date_info["kept"].append(sample)
+            station_info["last"] = sample
+            return
+
+        # compare bikes and slots with previous sample
+        if last[3] != bikes or last[4] != slots:
+            date_info["kept"].append(sample)
+            station_info["last"] = sample
+            return
+
+        # if same, skip
+        return
+
+    def _extract_deduplicate_data(self):
+        n = 0
+        t = 0
+        for sample in self._dao_v1.list_samples():
+            n += 1
+            t += 1
+            self._work_sample(sample)
+            if t > 1000:
+                t = 0
+                sys.stdout.write(".")
+                sys.stdout.flush()
+        self._flush_all()
+
+    def run(self):
+        with jcd.app.SqliteDB(jcd.app.App.DbName) as app_db:
+            self._app_db = app_db
+            self._initialize()
+            self._extract_deduplicate_data()
