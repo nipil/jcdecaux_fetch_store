@@ -164,13 +164,35 @@ See `import_v1 --help` for import_v1 parameter list.
 
 `--sync` defines the [SQLite *pragma synchronous*](https://www.sqlite.org/pragma.html#pragma_synchronous) used for databases during the import operation. Values are `0, 1, 2, 3` (OFF, NORMAL, FULL, EXTRA). Defaults to 0 (=OFF) for maximum speed. *Please be advised to use higher values for a better resilience regarding eventual system crashes*.
 
-Sample output:
+Sample output for the deduplication phase, and CSV export
 
-	Processing contract 1 station 19 date 2016-01-14... Committing. Stored 12 and removed 12
-	Processing contract 1 station 19 date 2016-01-15... Committing. Stored 12 and removed 12
-	Processing contract 1 station 19 date 2016-01-16... Committing. Stored 8 and removed 8
-	Processing contract 1 station 19 date 2016-01-17... Committing. Stored 1 and removed 1
-	Processing contract 1 station 19 date 2016-01-18... Committing. Stored 17 and removed 17
+	Read and deduplicate all version 1 data
+	Store results in daily CSV files
+	This will take a while :-)
+	...............................................................
+	... (and so on)
+	...............................................................
+	23144609 samples read and 18746591 extracted to CSV files
+
+Sample output for a part of the import phase (with no target data)
+
+	Importing CSV for 2016-02-23
+	Database samples_2016_02_23.db created
+	...............................................
+	... (and so on)
+	.............................................Done.
+	240773 samples added and 0 skipped
+
+Sample output for a part of the import phase (with target data)
+
+	Removing CSV file for 2016-02-23
+
+	Importing CSV for 2016-02-27
+	...............................................
+	... (and so on)
+	.............................................Done.
+	33817 samples added and 139232 skipped
+	Removing CSV file for 2016-02-27
 
 # Return value
 
