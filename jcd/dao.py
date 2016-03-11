@@ -165,20 +165,6 @@ class ContractsDAO(object):
             print "%s: %s" % (type(error).__name__, error)
             raise jcd.app.JcdException("Database error while checking contracts refresh")
 
-    def get_contract_name(self, contract_id):
-        try:
-            req = self._database.connection.execute(
-                '''
-                SELECT contract_name
-                FROM contracts
-                WHERE contract_id = ?
-                ''', (contract_id,))
-            result = req.fetchone()
-            return result[0]
-        except sqlite3.Error as error:
-            print "%s: %s" % (type(error).__name__, error)
-            raise jcd.app.JcdException("Database error while getting contract name")
-
 # settings table
 class FullSamplesDAO(object):
 
@@ -423,22 +409,6 @@ class ShortSamplesDAO(object):
     def get_changed_count(self):
         return self._database.get_count(self.TableNameChanged)
 
-    def get_earliest_timestamp(self, target_schema, f_contract, f_station):
-        try:
-            req = self._database.connection.execute(
-                '''
-                SELECT MIN(timestamp)
-                FROM %s.%s
-                WHERE contract_id = ? AND
-                    station_number = ?
-                ''' % (target_schema, self.TableNameArchive),
-                (f_contract, f_station))
-            result = req.fetchone()
-            return result[0]
-        except sqlite3.Error as error:
-            print "%s: %s" % (type(error).__name__, error)
-            raise jcd.app.JcdException("Database error getting earliest sample")
-
     def get_overall_earliest_timestamp(self, target_schema):
         try:
             req = self._database.connection.execute(
@@ -492,93 +462,6 @@ class Version1Dao(object):
 
     def has_sample_table(self):
         return self._database.has_table(self.TableName, self.SchemaName)
-
-    def remove_samples(self, date_str, contract_name, station_number):
-        params = {
-            "date_value": date_str,
-            "contract_value": contract_name,
-            "station_value": station_number,
-        }
-        try:
-            req = self._database.connection.execute(
-                '''
-                DELETE FROM %s.%s
-                WHERE
-                    (contract_name = :contract_value) AND
-                    (station_number = :station_value) AND
-                    (timestamp >= strftime('%%s', date(:date_value)) AND
-                        timestamp < strftime('%%s', date(:date_value, "+1 day")))
-                ''' % (self.SchemaName, self.TableName),
-                params)
-            return req.rowcount
-        except sqlite3.Error as error:
-            print "%s: %s" % (type(error).__name__, error)
-            raise jcd.app.JcdException(
-                "Database error while deleting samples from version 1 data")
-
-    def find_samples_filter(self, date_str, contract_id, station_number, maxtime, limit):
-        # modular query
-        params = {
-            "skip_date": True,
-            "date_value": 0,
-            "skip_contract": True,
-            "contract_value": 0,
-            "skip_station": True,
-            "station_value": 0,
-            "skip_maxtime": True,
-            "maxtime_value": 0,
-            "limit_query": -1,
-        }
-        # apply filters
-        if date_str is not None:
-            params["skip_date"] = False
-            params["date_value"] = date_str
-        if contract_id is not None:
-            params["skip_contract"] = False
-            params["contract_value"] = contract_id
-        if station_number is not None:
-            params["skip_station"] = False
-            params["station_value"] = station_number
-        if maxtime is not None:
-            params["skip_maxtime"] = False
-            params["maxtime_value"] = maxtime
-        # apply query limiting
-        if limit is not None:
-            params["limit_query"] = limit
-        # do the query
-        try:
-            req = self._database.connection.execute(
-                '''
-                SELECT s.timestamp,
-                    c.contract_id,
-                    s.station_number,
-                    s.bike,
-                    s.empty
-                FROM %s AS c JOIN %s.%s AS s
-                ON c.contract_name = s.contract_name
-                WHERE
-                    (:skip_contract OR c.contract_id = :contract_value) AND
-                    (:skip_station OR s.station_number = :station_value) AND
-                    (:skip_maxtime OR s.timestamp < :maxtime_value) AND
-                    (:skip_date OR
-                        s.timestamp >= strftime('%%s', date(:date_value)) AND
-                        s.timestamp < strftime('%%s', date(:date_value, "+1 day")))
-                ORDER BY c.contract_id, s.station_number, s.timestamp
-                LIMIT :limit_query
-                ''' % (ContractsDAO.TableName,
-                       self.SchemaName,
-                       self.TableName),
-                params)
-            while True:
-                samples = req.fetchmany(1000)
-                if not samples:
-                    break
-                for sample in samples:
-                    yield sample
-        except sqlite3.Error as error:
-            print "%s: %s" % (type(error).__name__, error)
-            raise jcd.app.JcdException(
-                "Database error listing available dates in version 1 data")
 
     def list_samples(self):
         # do the query
