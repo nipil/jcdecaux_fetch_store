@@ -523,8 +523,22 @@ class Import1Cmd(object):
                 self._work(sample)
 
     @staticmethod
-    def _flush_samples(date, data):
-        with open('%s.csv' % date, 'ab') as csvfile:
+    def _get_csv_name(date_str):
+        return '%s.csv' % date_str
+
+    @staticmethod
+    def _remove_csv_file(date_str):
+        filename = Import1Cmd._get_csv_name(date_str)
+        try:
+            os.remove(filename)
+        except OSError as error:
+            if error.errno != errno.ENOENT:
+                raise
+
+    @staticmethod
+    def _flush_samples(date_str, data):
+        filename = Import1Cmd._get_csv_name(date_str)
+        with open(filename, 'ab') as csvfile:
             writer = csv.writer(csvfile)
             writer.writerows(data)
             data.clear()
@@ -536,7 +550,7 @@ class Import1Cmd(object):
     def _work_sample(self, sample_raw):
         # manage dates
         timestamp = sample_raw[0]
-        date = sample_raw[1]
+        date_str = sample_raw[1]
         contract_id = sample_raw[2]
         station_number = sample_raw[3]
         bikes = sample_raw[4]
@@ -544,17 +558,21 @@ class Import1Cmd(object):
         sample = timestamp, contract_id, station_number, bikes, slots
 
         # manage structure
-        if date not in self._data:
-            self._data[date] = {
+        if date_str not in self._data:
+            self._data[date_str] = {
                 "kept": collections.deque(),
+                "created": False,
                 "contracts": dict()
             }
-        date_info = self._data[date]
+        date_info = self._data[date_str]
 
         # flush samples if required
         kept = date_info["kept"]
         if len(kept) >= 1000:
-            self._flush_samples(date, kept)
+            if not date_info["created"]:
+                self._remove_csv_file(date_str)
+                date_info["created"] = True
+            self._flush_samples(date_str, kept)
 
         # manage contracts
         contracts = date_info["contracts"]
