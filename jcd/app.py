@@ -171,7 +171,12 @@ class ApiAccess(object):
 
     @staticmethod
     def _parse_reply(reply_text):
-        reply_json = json.loads(reply_text)
+        try:
+            reply_json = json.loads(reply_text)
+        except ValueError as error:
+            print "%s: %s" % (type(error).__name__, error)
+            raise JcdException(
+                "Could not parse JSON reply : %s" % (reply_text, ))
         if isinstance(reply_json, dict) and reply_json.has_key("error"):
             error = reply_json["error"]
             raise JcdException(
@@ -187,6 +192,9 @@ class ApiAccess(object):
         headers = {"Accept": "application/json"}
         try:
             request = requests.get(url, params=payload, headers=headers)
+            if request.status_code != requests.codes.ok:
+                raise JcdException("JCDecaux Requests exception: (%i) %s\n%s" % (
+                    request.status_code, url, repr(request.headers)))
             # avoid ultra-slow character set auto-detection
             # see https://github.com/kennethreitz/requests/issues/2359
             request.encoding = "utf-8"
