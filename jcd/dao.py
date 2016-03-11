@@ -439,6 +439,19 @@ class ShortSamplesDAO(object):
             print "%s: %s" % (type(error).__name__, error)
             raise jcd.app.JcdException("Database error getting earliest sample")
 
+    def get_overall_earliest_timestamp(self, target_schema):
+        try:
+            req = self._database.connection.execute(
+                '''
+                SELECT MIN(timestamp)
+                FROM %s.%s
+                ''' % (target_schema, self.TableNameArchive))
+            result = req.fetchone()
+            return result[0]
+        except sqlite3.Error as error:
+            print "%s: %s" % (type(error).__name__, error)
+            raise jcd.app.JcdException("Database error getting earliest sample")
+
     def insert_samples(self, samples, target_schema):
         # do not do anything if nothing is to be done
         if len(samples) == 0:

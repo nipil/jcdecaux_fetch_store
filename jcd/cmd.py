@@ -543,6 +543,14 @@ class Import1Cmd(object):
             writer.writerows(data)
             data.clear()
 
+    @staticmethod
+    def _load_samples(date_str):
+        filename = Import1Cmd._get_csv_name(date_str)
+        with open(filename, 'rb') as csvfile:
+            reader = csv.reader(csvfile)
+            for sample in reader:
+                yield sample
+
     def _flush_all(self):
         for date_str, date_info in self._data.iteritems():
             self._flush_samples(date_str, date_info["kept"])
@@ -620,8 +628,49 @@ class Import1Cmd(object):
                 sys.stdout.flush()
         self._flush_all()
 
+    def _import_data(self, date_str, earliest_timestamp):
+        reader = self._load_samples(date_str)
+        self._kept_samples = collections.deque()
+        self._n_worked = 0
+        self._n_stored = 0
+        for sample in reader:
+            self._n_worked += 1
+            # CSV reads strings
+            sample_int = [ int(x) for x in sample ]
+            # do not go beyond what is already in db
+            if earliest_timestamp is not None and sample_int[0] >= earliest_timestamp:
+                    continue
+            self._kept_samples.append(sample_int)
+            # periodic flush
+            if len(self._kept_samples) >= 1000:
+                sys.stdout.write(".")
+                sys.stdout.flush()
+                self._store_kept_samples()
+        # final flush
+        self._store_kept_samples()
+
+    def _import_all_csv_data(self):
+        for date in self._data.keys():
+            print "Importing CSV for", date
+            self._f_date_str = date
+            # attach target database
+            self._attach_v2_daily_db() # warning: commits
+            # find maximum target timestamp, to limit import
+            timestamp = self._short_dao.get_overall_earliest_timestamp(self._daily_schema_name)
+            self._import_data(date, timestamp)
+            # commit transaction
+            self._app_db.commit()
+            print "Done."
+            print self._n_stored, "samples added and", (self._n_worked-self._n_stored), "skipped"
+            # detach target daily db
+            self._detach_v2_daily_db() # warning: commits
+            # remove imported csv file
+            print "Removing CSV file for", date
+            self._remove_csv_file(date)
+
     def run(self):
         with jcd.app.SqliteDB(jcd.app.App.DbName) as app_db:
             self._app_db = app_db
             self._initialize()
             self._extract_deduplicate_data()
+            self._import_all_csv_data()
