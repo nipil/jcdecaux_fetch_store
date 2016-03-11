@@ -194,6 +194,8 @@ Sample output for a part of the import phase (with target data)
 	33817 samples added and 139232 skipped
 	Removing CSV file for 2016-02-27
 
+Information: for 1GB of version 1 data, representing approximately 60 days, the total processing time takes about 12 minutes, on a laptop with Core 2 Duo T7500 CPU at 2.20GHz, and 2GB of RAM.
+
 # Return value
 
 `0` when everything was fine
