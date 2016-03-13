@@ -25,6 +25,7 @@
 
 import sqlite3
 
+import jcd.common
 import jcd.app
 import jcd.cmd
 
@@ -49,7 +50,7 @@ class SettingsDAO(object):
                 ''' % self.TableName)
         except sqlite3.Error as error:
             print "%s: %s" % (type(error).__name__, error)
-            raise jcd.app.JcdException(
+            raise jcd.common.JcdException(
                 "Database error while creating table [%s]" % self.TableName)
 
     def set_parameter(self, name, value):
@@ -61,7 +62,7 @@ class SettingsDAO(object):
                 ''' % self.TableName, (name, value))
         except sqlite3.Error as error:
             print "%s: %s" % (type(error).__name__, error)
-            raise jcd.app.JcdException(
+            raise jcd.common.JcdException(
                 "Database error while setting parameter [%s]" % name)
 
     def get_parameter(self, name):
@@ -79,7 +80,7 @@ class SettingsDAO(object):
             return result
         except sqlite3.Error as error:
             print "%s: %s" % (type(error).__name__, error)
-            raise jcd.app.JcdException(
+            raise jcd.common.JcdException(
                 "Database error while fetching parameter [%s]" % name)
 
 # contract table
@@ -106,7 +107,7 @@ class ContractsDAO(object):
                 ''' % self.TableName)
         except sqlite3.Error as error:
             print "%s: %s" % (type(error).__name__, error)
-            raise jcd.app.JcdException(
+            raise jcd.common.JcdException(
                 "Database error while creating table [%s]" % self.TableName)
 
     def store_contracts(self, json_content, timestamp):
@@ -147,7 +148,7 @@ class ContractsDAO(object):
             return req.rowcount
         except sqlite3.Error as error:
             print "%s: %s" % (type(error).__name__, error)
-            raise jcd.app.JcdException("Database error while inserting contracts")
+            raise jcd.common.JcdException("Database error while inserting contracts")
 
     def is_refresh_needed(self):
         try:
@@ -163,7 +164,7 @@ class ContractsDAO(object):
             return result[0] is None or result[0] == 1
         except sqlite3.Error as error:
             print "%s: %s" % (type(error).__name__, error)
-            raise jcd.app.JcdException("Database error while checking contracts refresh")
+            raise jcd.common.JcdException("Database error while checking contracts refresh")
 
 # settings table
 class FullSamplesDAO(object):
@@ -202,7 +203,7 @@ class FullSamplesDAO(object):
                 ''' % table_name)
         except sqlite3.Error as error:
             print "%s: %s" % (type(error).__name__, error)
-            raise jcd.app.JcdException(
+            raise jcd.common.JcdException(
                 "Database error while creating table [%s]" % table_name)
 
     def store_new_samples(self, json_content, timestamp):
@@ -252,7 +253,7 @@ class FullSamplesDAO(object):
             return req.rowcount
         except sqlite3.Error as error:
             print "%s: %s" % (type(error).__name__, error)
-            raise jcd.app.JcdException("Database error while inserting state")
+            raise jcd.common.JcdException("Database error while inserting state")
 
     def age_samples(self, date):
         try:
@@ -273,14 +274,14 @@ class FullSamplesDAO(object):
             deleted = req.rowcount
             # verify coherence
             if deleted != inserted:
-                raise jcd.app.JcdException(
+                raise jcd.common.JcdException(
                     "Ageing operation failed (%i inserted, %i deleted)" % (
                         inserted, deleted))
             # return aged number of records
             return inserted
         except sqlite3.Error as error:
             print "%s: %s" % (type(error).__name__, error)
-            raise jcd.app.JcdException("Database error ageing new samples into old")
+            raise jcd.common.JcdException("Database error ageing new samples into old")
 
 # stored sample DAO
 class ShortSamplesDAO(object):
@@ -306,7 +307,7 @@ class ShortSamplesDAO(object):
                 ''' % table_name)
         except sqlite3.Error as error:
             print "%s: %s" % (type(error).__name__, error)
-            raise jcd.app.JcdException(
+            raise jcd.common.JcdException(
                 "Database error while creating table [%s]" % table_name)
 
     def create_changed_table(self):
@@ -342,7 +343,7 @@ class ShortSamplesDAO(object):
             return req.rowcount
         except sqlite3.Error as error:
             print "%s: %s" % (type(error).__name__, error)
-            raise jcd.app.JcdException("Database error building changed samples")
+            raise jcd.common.JcdException("Database error building changed samples")
 
     def get_changed_samples_stats(self):
         try:
@@ -358,7 +359,7 @@ class ShortSamplesDAO(object):
             return req.fetchall()
         except sqlite3.Error as error:
             print "%s: %s" % (type(error).__name__, error)
-            raise jcd.app.JcdException("Database error getting changed date list")
+            raise jcd.common.JcdException("Database error getting changed date list")
 
     @staticmethod
     def get_schema_name(date):
@@ -369,7 +370,7 @@ class ShortSamplesDAO(object):
         return "%s.db" % schema_name
 
     def initialize_archived_table(self, dbfilename):
-        with jcd.app.SqliteDB(dbfilename) as storage_db:
+        with jcd.common.SqliteDB(dbfilename) as storage_db:
             if not storage_db.has_table(self.TableNameArchive):
                 self._create_table(storage_db, self.TableNameArchive)
                 return True
@@ -396,14 +397,14 @@ class ShortSamplesDAO(object):
             deleted = req.rowcount
             # verify coherence
             if deleted != inserted:
-                raise jcd.app.JcdException(
+                raise jcd.common.JcdException(
                     "Archive operation failed (%i inserted, %i deleted)" % (
                         inserted, deleted))
             # return number of archived records
             return inserted
         except sqlite3.Error as error:
             print "%s: %s" % (type(error).__name__, error)
-            raise jcd.app.JcdException(
+            raise jcd.common.JcdException(
                 "Database error achiving changed samples to %s" % target_schema)
 
     def get_changed_count(self):
@@ -420,7 +421,7 @@ class ShortSamplesDAO(object):
             return result[0]
         except sqlite3.Error as error:
             print "%s: %s" % (type(error).__name__, error)
-            raise jcd.app.JcdException("Database error getting earliest sample")
+            raise jcd.common.JcdException("Database error getting earliest sample")
 
     def insert_samples(self, samples, target_schema):
         # do not do anything if nothing is to be done
@@ -440,14 +441,14 @@ class ShortSamplesDAO(object):
                 ''' % (target_schema, self.TableNameArchive), (samples))
             # verify insertion
             if len(samples) != req.rowcount:
-                raise jcd.app.JcdException(
+                raise jcd.common.JcdException(
                     "Stored only %i of %i samples to target database" % (
                         req.rowcount, len(samples)))
             # return number of inserted records
             return req.rowcount
         except sqlite3.Error as error:
             print "%s: %s" % (type(error).__name__, error)
-            raise jcd.app.JcdException(
+            raise jcd.common.JcdException(
                 "Database error while inserting %i samples into %s.%s" % (
                     len(samples), target_schema, self.TableNameArchive))
 
@@ -487,5 +488,5 @@ class Version1Dao(object):
                     yield sample
         except sqlite3.Error as error:
             print "%s: %s" % (type(error).__name__, error)
-            raise jcd.app.JcdException(
+            raise jcd.common.JcdException(
                 "Database error listing all samples in version 1 data")

@@ -32,6 +32,7 @@ import random
 import os.path
 import collections
 
+import jcd.common
 import jcd.app
 import jcd.dao
 
@@ -54,7 +55,7 @@ class InitCmd(object):
             if error.errno == errno.ENOENT:
                 return
             # on other errors
-            raise jcd.app.JcdException("Could not remove folder : %s" % error)
+            raise jcd.common.JcdException("Could not remove folder : %s" % error)
 
     @staticmethod
     def _create_data_folder():
@@ -66,7 +67,7 @@ class InitCmd(object):
         except OSError as exception:
             # folder exists
             if exception.errno == errno.EEXIST:
-                raise jcd.app.JcdException(
+                raise jcd.common.JcdException(
                     "Folder [%s] already exists. Use --force "
                     "to destroy everything anyway." % jcd.app.App.DataPath)
             # other system error
@@ -74,7 +75,7 @@ class InitCmd(object):
 
     @staticmethod
     def _create_tables():
-        with jcd.app.SqliteDB(jcd.app.App.DbName) as app_db:
+        with jcd.common.SqliteDB(jcd.app.App.DbName) as app_db:
             settings = jcd.dao.SettingsDAO(app_db)
             settings.create_table()
             contracts = jcd.dao.ContractsDAO(app_db)
@@ -86,7 +87,7 @@ class InitCmd(object):
 
     @staticmethod
     def set_default_parameters():
-        with jcd.app.SqliteDB(jcd.app.App.DbName) as app_db:
+        with jcd.common.SqliteDB(jcd.app.App.DbName) as app_db:
             settings = jcd.dao.SettingsDAO(app_db)
             for value in ConfigCmd.Parameters:
                 if jcd.app.App.Verbose and value[3] is not None:
@@ -118,7 +119,7 @@ class ConfigCmd(object):
 
     @staticmethod
     def display_parameter(param):
-        with jcd.app.SqliteDB(jcd.app.App.DbName) as app_db:
+        with jcd.common.SqliteDB(jcd.app.App.DbName) as app_db:
             settings = jcd.dao.SettingsDAO(app_db)
             (value, last_modification) = settings.get_parameter(param)
             # don't check for verbose, display is mandatory
@@ -127,7 +128,7 @@ class ConfigCmd(object):
 
     @staticmethod
     def update_parameter(param, value):
-        with jcd.app.SqliteDB(jcd.app.App.DbName) as app_db:
+        with jcd.common.SqliteDB(jcd.app.App.DbName) as app_db:
             settings = jcd.dao.SettingsDAO(app_db)
             settings.set_parameter(param, value)
             # if all went well
@@ -166,19 +167,19 @@ class AdminCmd(object):
     def vacuum():
         if jcd.app.App.Verbose:
             print "Vacuuming %s" % jcd.app.App.DbName
-        with jcd.app.SqliteDB(jcd.app.App.DbName) as app_db:
+        with jcd.common.SqliteDB(jcd.app.App.DbName) as app_db:
             app_db.vacuum()
 
     @staticmethod
     def apitest():
         if jcd.app.App.Verbose:
             print "Testing JCDecaux API access"
-        with jcd.app.SqliteDB(jcd.app.App.DbName) as app_db:
+        with jcd.common.SqliteDB(jcd.app.App.DbName) as app_db:
             # fetch api key
             settings = jcd.dao.SettingsDAO(app_db)
             apikey = settings.get_parameter("apikey")
             if apikey is None:
-                raise jcd.app.JcdException(
+                raise jcd.common.JcdException(
                     "API key is not set ! "
                     "Please configure using 'config --apikey'")
             # real testing
@@ -232,7 +233,7 @@ class FetchCmd(object):
         self._timestamp = int(time.time())
 
     def fetch_contracts(self):
-        with jcd.app.SqliteDB(jcd.app.App.DbName) as app_db:
+        with jcd.common.SqliteDB(jcd.app.App.DbName) as app_db:
             settings = jcd.dao.SettingsDAO(app_db)
             dao = jcd.dao.ContractsDAO(app_db)
             # in case of cron, check for refresh necessity
@@ -241,7 +242,7 @@ class FetchCmd(object):
             # fetch api key
             apikey = settings.get_parameter("apikey")
             if apikey is None:
-                raise jcd.app.JcdException(
+                raise jcd.common.JcdException(
                     "API key is not set ! "
                     "Please configure using 'config --apikey'")
             # get all available contracts
@@ -255,14 +256,14 @@ class FetchCmd(object):
                 print "New contracts added: %i" % new_contracts_count
 
     def fetch_state(self):
-        with jcd.app.SqliteDB(jcd.app.App.DbName) as app_db:
+        with jcd.common.SqliteDB(jcd.app.App.DbName) as app_db:
             settings = jcd.dao.SettingsDAO(app_db)
             full_dao = jcd.dao.FullSamplesDAO(app_db)
             short_dao = jcd.dao.ShortSamplesDAO(app_db)
             # fetch api key
             apikey = settings.get_parameter("apikey")
             if apikey is None:
-                raise jcd.app.JcdException(
+                raise jcd.common.JcdException(
                     "API key is not set ! "
                     "Please configure using 'config --apikey'")
             # get all station states
@@ -292,7 +293,7 @@ class StoreCmd(object):
 
     @staticmethod
     def run():
-        with jcd.app.SqliteDB(jcd.app.App.DbName) as app_db:
+        with jcd.common.SqliteDB(jcd.app.App.DbName) as app_db:
             full_dao = jcd.dao.FullSamplesDAO(app_db)
             short_dao = jcd.dao.ShortSamplesDAO(app_db)
             # daily databases are used
@@ -315,7 +316,7 @@ class StoreCmd(object):
                 num_stored = short_dao.archive_changed_samples(
                     date, schema_name)
                 if num_stored != count:
-                    raise jcd.app.JcdException(
+                    raise jcd.common.JcdException(
                         "Not all changed samples could be archived")
                 # age new samples into old
                 num_aged = full_dao.age_samples(date)
@@ -329,7 +330,7 @@ class StoreCmd(object):
             # unchanged new are not aged, old holds last change
             remain_changed = short_dao.get_changed_count()
             if remain_changed > 0:
-                raise jcd.app.JcdException(
+                raise jcd.common.JcdException(
                     "Unprocessed changes: %i" % remain_changed)
 
 # store state into database:
@@ -383,7 +384,7 @@ class Import1Cmd(object):
         # check for version 1 data
         self._dao_v1 = jcd.dao.Version1Dao(self._app_db)
         if not self._dao_v1.has_sample_table():
-            raise jcd.app.JcdException(
+            raise jcd.common.JcdException(
                 "Version 1 database is missing its sample table")
 
     def _attach_v2_daily_db(self):
@@ -569,7 +570,7 @@ class Import1Cmd(object):
             self._remove_csv_file(date)
 
     def run(self):
-        with jcd.app.SqliteDB(jcd.app.App.DbName) as app_db:
+        with jcd.common.SqliteDB(jcd.app.App.DbName) as app_db:
             self._app_db = app_db
             self._initialize()
             self._extract_deduplicate_data()
