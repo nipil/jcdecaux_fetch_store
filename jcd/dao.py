@@ -370,7 +370,7 @@ class ShortSamplesDAO(object):
         return "%s.db" % schema_name
 
     def initialize_archived_table(self, dbfilename):
-        with jcd.common.SqliteDB(dbfilename) as storage_db:
+        with jcd.common.SqliteDB(dbfilename, jcd.app.App.DataPath) as storage_db:
             if not storage_db.has_table(self.TableNameArchive):
                 self._create_table(storage_db, self.TableNameArchive)
                 return True

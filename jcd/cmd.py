@@ -75,7 +75,7 @@ class InitCmd(object):
 
     @staticmethod
     def _create_tables():
-        with jcd.common.SqliteDB(jcd.app.App.DbName) as app_db:
+        with jcd.common.SqliteDB(jcd.app.App.DbName, jcd.app.App.DataPath) as app_db:
             settings = jcd.dao.SettingsDAO(app_db)
             settings.create_table()
             contracts = jcd.dao.ContractsDAO(app_db)
@@ -87,7 +87,7 @@ class InitCmd(object):
 
     @staticmethod
     def set_default_parameters():
-        with jcd.common.SqliteDB(jcd.app.App.DbName) as app_db:
+        with jcd.common.SqliteDB(jcd.app.App.DbName, jcd.app.App.DataPath) as app_db:
             settings = jcd.dao.SettingsDAO(app_db)
             for value in ConfigCmd.Parameters:
                 if jcd.app.App.Verbose and value[3] is not None:
@@ -119,7 +119,7 @@ class ConfigCmd(object):
 
     @staticmethod
     def display_parameter(param):
-        with jcd.common.SqliteDB(jcd.app.App.DbName) as app_db:
+        with jcd.common.SqliteDB(jcd.app.App.DbName, jcd.app.App.DataPath) as app_db:
             settings = jcd.dao.SettingsDAO(app_db)
             (value, last_modification) = settings.get_parameter(param)
             # don't check for verbose, display is mandatory
@@ -128,7 +128,7 @@ class ConfigCmd(object):
 
     @staticmethod
     def update_parameter(param, value):
-        with jcd.common.SqliteDB(jcd.app.App.DbName) as app_db:
+        with jcd.common.SqliteDB(jcd.app.App.DbName, jcd.app.App.DataPath) as app_db:
             settings = jcd.dao.SettingsDAO(app_db)
             settings.set_parameter(param, value)
             # if all went well
@@ -167,14 +167,14 @@ class AdminCmd(object):
     def vacuum():
         if jcd.app.App.Verbose:
             print "Vacuuming %s" % jcd.app.App.DbName
-        with jcd.common.SqliteDB(jcd.app.App.DbName) as app_db:
+        with jcd.common.SqliteDB(jcd.app.App.DbName, jcd.app.App.DataPath) as app_db:
             app_db.vacuum()
 
     @staticmethod
     def apitest():
         if jcd.app.App.Verbose:
             print "Testing JCDecaux API access"
-        with jcd.common.SqliteDB(jcd.app.App.DbName) as app_db:
+        with jcd.common.SqliteDB(jcd.app.App.DbName, jcd.app.App.DataPath) as app_db:
             # fetch api key
             settings = jcd.dao.SettingsDAO(app_db)
             apikey = settings.get_parameter("apikey")
@@ -233,7 +233,7 @@ class FetchCmd(object):
         self._timestamp = int(time.time())
 
     def fetch_contracts(self):
-        with jcd.common.SqliteDB(jcd.app.App.DbName) as app_db:
+        with jcd.common.SqliteDB(jcd.app.App.DbName, jcd.app.App.DataPath) as app_db:
             settings = jcd.dao.SettingsDAO(app_db)
             dao = jcd.dao.ContractsDAO(app_db)
             # in case of cron, check for refresh necessity
@@ -256,7 +256,7 @@ class FetchCmd(object):
                 print "New contracts added: %i" % new_contracts_count
 
     def fetch_state(self):
-        with jcd.common.SqliteDB(jcd.app.App.DbName) as app_db:
+        with jcd.common.SqliteDB(jcd.app.App.DbName, jcd.app.App.DataPath) as app_db:
             settings = jcd.dao.SettingsDAO(app_db)
             full_dao = jcd.dao.FullSamplesDAO(app_db)
             short_dao = jcd.dao.ShortSamplesDAO(app_db)
@@ -293,7 +293,7 @@ class StoreCmd(object):
 
     @staticmethod
     def run():
-        with jcd.common.SqliteDB(jcd.app.App.DbName) as app_db:
+        with jcd.common.SqliteDB(jcd.app.App.DbName, jcd.app.App.DataPath) as app_db:
             full_dao = jcd.dao.FullSamplesDAO(app_db)
             short_dao = jcd.dao.ShortSamplesDAO(app_db)
             # daily databases are used
@@ -307,7 +307,7 @@ class StoreCmd(object):
                 if jcd.app.App.Verbose and created:
                     print "Database [%s] created" % db_filename
                 # WARNING: attaching commits current transaction
-                app_db.attach_database(db_filename, schema_name)
+                app_db.attach_database(db_filename, schema_name, jcd.app.App.DataPath)
                 # moving changed samples to attached db
                 if jcd.app.App.Verbose:
                     print "Archiving %i changed samples into %s" % (
@@ -570,7 +570,7 @@ class Import1Cmd(object):
             self._remove_csv_file(date)
 
     def run(self):
-        with jcd.common.SqliteDB(jcd.app.App.DbName) as app_db:
+        with jcd.common.SqliteDB(jcd.app.App.DbName, jcd.app.App.DataPath) as app_db:
             self._app_db = app_db
             self._initialize()
             self._extract_deduplicate_data()

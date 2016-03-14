@@ -37,27 +37,26 @@ class JcdException(Exception):
 # manages access to the application database
 class SqliteDB(object):
 
-    def __init__(self, db_filename, path=None):
-        self._db_path = SqliteDB.get_full_path(db_filename, path)
+    def __init__(self, db_filename, data_path):
+        self._data_path = data_path
+        self._file_name = db_filename
+        self._full_path = SqliteDB.get_full_path(self._file_name, self._data_path)
         self.connection = None
         self._att_databases = {}
 
     @staticmethod
-    def get_full_path(filename, path=None):
-        # use the current version path as default path
-        if path is None:
-            path = jcd.app.App.DataPath
+    def get_full_path(filename, path):
         return os.path.normpath(os.path.expanduser(
             "%s/%s" % (path, filename)))
 
     def open(self):
         if self.connection is None:
             try:
-                self.connection = sqlite3.connect(self._db_path)
+                self.connection = sqlite3.connect(self._full_path)
             except sqlite3.Error as error:
                 print "%s: %s" % (type(error).__name__, error)
                 raise JcdException(
-                    "Database error while opening [%s]" % self._db_path)
+                    "Database error while opening [%s]" % self._full_path)
 
     def close(self):
         # close main databases
@@ -100,7 +99,7 @@ class SqliteDB(object):
             raise JcdException(
                 "Database error checking if table [%s] exists" % name)
 
-    def attach_database(self, file_name, schema_name, path=None):
+    def attach_database(self, file_name, schema_name, path):
         file_path = SqliteDB.get_full_path(file_name, path)
         if schema_name in self._att_databases:
             raise JcdException(
