@@ -63,8 +63,8 @@ class ApiAccess(object):
         try:
             request = requests.get(url, params=payload, headers=headers)
             if request.status_code != requests.codes.ok:
-                raise jcd.common.JcdException("JCDecaux Requests exception: (%i) %s\n%s" % (
-                    request.status_code, url, repr(request.headers)))
+                raise jcd.common.JcdException("JCDecaux Requests exception: (%i) %s headers=%s content=%s" % (
+                    request.status_code, url, repr(request.headers), repr(request.text)))
             # avoid ultra-slow character set auto-detection
             # see https://github.com/kennethreitz/requests/issues/2359
             request.encoding = "utf-8"
