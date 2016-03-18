@@ -236,7 +236,7 @@ This behaviour is consistent with version 1 way of handling time and dates.
 
 Each daily database contains changes for every single contract and station for that day. As a consequence, the storage size is maximal.
 
-Depending on the day of the week, the weather, holiday or not, **each day** represents between **6-15 MBytes** of disk space.
+Depending on the day of the week, the weather, holiday or not, **each day** represents between **2-7 MBytes** of disk space (source: data from 2015-12-05 to 2016-03-17).
 
 If you do not want the whole data database, it is possible. Just :
 - use to tool to collect everything daily
