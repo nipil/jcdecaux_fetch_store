@@ -46,7 +46,8 @@ class SettingsDAO(object):
                 CREATE TABLE %s (
                     name TEXT PRIMARY KEY NOT NULL,
                     value, -- no type, use affinity
-                    last_modification INTEGER NOT NULL)
+                    last_modification INTEGER NOT NULL
+                ) WITHOUT ROWID;
                 ''' % self.TableName)
         except sqlite3.Error as error:
             print "%s: %s" % (type(error).__name__, error)
@@ -199,7 +200,8 @@ class FullSamplesDAO(object):
                     address TEXT NOT NULL,
                     station_name TEXT NOT NULL,
                     last_update INTEGER,
-                    PRIMARY KEY (contract_id, station_number))
+                    PRIMARY KEY (contract_id, station_number)
+                ) WITHOUT ROWID;
                 ''' % table_name)
         except sqlite3.Error as error:
             print "%s: %s" % (type(error).__name__, error)
@@ -303,7 +305,8 @@ class ShortSamplesDAO(object):
                     station_number INTEGR NOT NULL,
                     available_bikes INTEGER NOT NULL,
                     available_bike_stands INTEGER NOT NULL,
-                    PRIMARY KEY (timestamp, contract_id, station_number))
+                    PRIMARY KEY (timestamp, contract_id, station_number)
+                ) WITHOUT ROWID;
                 ''' % table_name)
         except sqlite3.Error as error:
             print "%s: %s" % (type(error).__name__, error)
