@@ -106,40 +106,40 @@ class ContractsDAO(object):
         for contract in json_content:
             contract["timestamp"] = timestamp
             contract["cities"] = "/".join(contract["cities"])
-        try:
-            # update any existing contracts
-            self._database.connection.executemany(
-                '''
-                UPDATE OR IGNORE %s
-                SET timestamp = :timestamp,
-                    commercial_name = :commercial_name,
-                    country_code = :country_code,
-                    cities = :cities
-                WHERE contract_name = :name
-                ''' % self.TableName, json_content)
-            # add possible new contracts
-            req = self._database.connection.executemany(
-                '''
-                INSERT OR IGNORE INTO %s (
-                    contract_id,
-                    timestamp,
-                    contract_name,
-                    commercial_name,
-                    country_code,
-                    cities)
-                VALUES (
-                    NULL,
-                    :timestamp,
-                    :name,
-                    :commercial_name,
-                    :country_code,
-                    :cities)
-                ''' % self.TableName, json_content)
-            # return number of inserted records
-            return req.rowcount
-        except sqlite3.Error as error:
-            print "%s: %s" % (type(error).__name__, error)
-            raise jcd.common.JcdException("Database error while inserting contracts")
+        # update any existing contracts
+        self._database.execute_many(
+            '''
+            UPDATE OR IGNORE %s
+            SET timestamp = :timestamp,
+                commercial_name = :commercial_name,
+                country_code = :country_code,
+                cities = :cities
+            WHERE contract_name = :name
+            ''' % self.TableName,
+            json_content,
+            "Database error while updating contracts")
+        # add possible new contracts
+        num_inserted = self._database.execute_many(
+            '''
+            INSERT OR IGNORE INTO %s (
+                contract_id,
+                timestamp,
+                contract_name,
+                commercial_name,
+                country_code,
+                cities)
+            VALUES (
+                NULL,
+                :timestamp,
+                :name,
+                :commercial_name,
+                :country_code,
+                :cities)
+            ''' % self.TableName,
+            json_content,
+            "Database error while inserting contracts")
+        # return number of new contracts
+        return num_inserted
 
     def is_refresh_needed(self):
         try:
@@ -207,45 +207,43 @@ class FullSamplesDAO(object):
             station["banking"] = 1 if station["banking"] else 0
             station["position"] = "/".join(
                 str(v) for v in station["position"].values())
-        try:
-            # insert station data
-            req = self._database.connection.executemany(
-                '''
-                INSERT OR REPLACE INTO %s (
-                    timestamp,
-                    contract_id,
-                    station_number,
-                    available_bikes,
-                    available_bike_stands,
-                    status,
-                    bike_stands,
-                    bonus,
-                    banking,
-                    position,
-                    address,
-                    station_name,
-                    last_update)
-                VALUES (
-                    :timestamp,
-                    (SELECT contract_id FROM %s
-                        WHERE contract_name = :contract_name),
-                    :number,
-                    :available_bikes,
-                    :available_bike_stands,
-                    :status,
-                    :bike_stands,
-                    :bonus,
-                    :banking,
-                    :position,
-                    :address,
-                    :name,
-                    :last_update)
-                ''' % (self.TableNameNew, ContractsDAO.TableName), json_content)
-            # return number of inserted records
-            return req.rowcount
-        except sqlite3.Error as error:
-            print "%s: %s" % (type(error).__name__, error)
-            raise jcd.common.JcdException("Database error while inserting state")
+        # insert station data
+        num_inserted = self._database.execute_many(
+            '''
+            INSERT OR REPLACE INTO %s (
+                timestamp,
+                contract_id,
+                station_number,
+                available_bikes,
+                available_bike_stands,
+                status,
+                bike_stands,
+                bonus,
+                banking,
+                position,
+                address,
+                station_name,
+                last_update)
+            VALUES (
+                :timestamp,
+                (SELECT contract_id FROM %s
+                    WHERE contract_name = :contract_name),
+                :number,
+                :available_bikes,
+                :available_bike_stands,
+                :status,
+                :bike_stands,
+                :bonus,
+                :banking,
+                :position,
+                :address,
+                :name,
+                :last_update)
+            ''' % (self.TableNameNew, ContractsDAO.TableName),
+            json_content,
+            "Database error while inserting state")
+        # return number of inserted records
+        return num_inserted
 
     def age_samples(self, date):
         try:
@@ -420,30 +418,27 @@ class ShortSamplesDAO(object):
         # do not do anything if nothing is to be done
         if len(samples) == 0:
             return
-        try:
-            # add samples
-            req = self._database.connection.executemany(
-                '''
-                INSERT INTO %s.%s (
-                    timestamp,
-                    contract_id,
-                    station_number,
-                    available_bikes,
-                    available_bike_stands)
-                VALUES (?, ?, ?, ?, ?)
-                ''' % (target_schema, self.TableNameArchive), (samples))
-            # verify insertion
-            if len(samples) != req.rowcount:
-                raise jcd.common.JcdException(
-                    "Stored only %i of %i samples to target database" % (
-                        req.rowcount, len(samples)))
-            # return number of inserted records
-            return req.rowcount
-        except sqlite3.Error as error:
-            print "%s: %s" % (type(error).__name__, error)
+        # add samples
+        num_inserted = self._database.execute_many(
+            '''
+            INSERT INTO %s.%s (
+                timestamp,
+                contract_id,
+                station_number,
+                available_bikes,
+                available_bike_stands)
+            VALUES (?, ?, ?, ?, ?)
+            ''' % (target_schema, self.TableNameArchive),
+            (samples),
+            "Database error while inserting %i samples into %s.%s" % (
+                len(samples), target_schema, self.TableNameArchive))
+        # verify insertion
+        if len(samples) != num_inserted:
             raise jcd.common.JcdException(
-                "Database error while inserting %i samples into %s.%s" % (
-                    len(samples), target_schema, self.TableNameArchive))
+                "Stored only %i of %i samples to target database" % (
+                    num_inserted, len(samples)))
+        # return number of inserted records
+        return num_inserted
 
 # stored sample DAO
 class Version1Dao(object):
