@@ -40,49 +40,39 @@ class SettingsDAO(object):
     def create_table(self):
         if jcd.app.App.Verbose:
             print "Creating table [%s]" % self.TableName
-        try:
-            self._database.connection.execute(
-                '''
-                CREATE TABLE %s (
-                    name TEXT PRIMARY KEY NOT NULL,
-                    value, -- no type, use affinity
-                    last_modification INTEGER NOT NULL
-                ) WITHOUT ROWID;
-                ''' % self.TableName)
-        except sqlite3.Error as error:
-            print "%s: %s" % (type(error).__name__, error)
-            raise jcd.common.JcdException(
-                "Database error while creating table [%s]" % self.TableName)
+        self._database.execute_single(
+            '''
+            CREATE TABLE %s (
+                name TEXT PRIMARY KEY NOT NULL,
+                value, -- no type, use affinity
+                last_modification INTEGER NOT NULL
+            ) WITHOUT ROWID;
+            ''' % self.TableName,
+            None,
+            "Database error while creating table [%s]" % self.TableName)
 
     def set_parameter(self, name, value):
-        try:
-            self._database.connection.execute(
-                '''
-                INSERT OR REPLACE INTO %s (name, value, last_modification)
-                VALUES (?, ?, strftime('%%s', 'now'))
-                ''' % self.TableName, (name, value))
-        except sqlite3.Error as error:
-            print "%s: %s" % (type(error).__name__, error)
-            raise jcd.common.JcdException(
-                "Database error while setting parameter [%s]" % name)
+        self._database.execute_single(
+            '''
+            INSERT OR REPLACE INTO %s (name, value, last_modification)
+            VALUES (?, ?, strftime('%%s', 'now'))
+            ''' % self.TableName,
+            (name, value),
+            "Database error while setting parameter [%s]" % name)
 
     def get_parameter(self, name):
-        try:
-            results = self._database.connection.execute(
-                '''
-                SELECT value,
-                    datetime(last_modification, 'unixepoch') as modified_stamp
-                FROM %s
-                WHERE name = ?
-                ''' % self.TableName, (name, ))
-            result = results.fetchone()
-            if result is None:
-                return (None, None)
-            return result
-        except sqlite3.Error as error:
-            print "%s: %s" % (type(error).__name__, error)
-            raise jcd.common.JcdException(
-                "Database error while fetching parameter [%s]" % name)
+        result = self._database.execute_fetch_one(
+            '''
+            SELECT value,
+                datetime(last_modification, 'unixepoch') as modified_stamp
+            FROM %s
+            WHERE name = ?
+            ''' % self.TableName,
+            (name, ),
+            "Database error while fetching parameter [%s]" % name)
+        if result is None:
+            return (None, None)
+        return result
 
 # contract table
 class ContractsDAO(object):
