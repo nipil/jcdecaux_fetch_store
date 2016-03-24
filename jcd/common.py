@@ -156,3 +156,68 @@ class SqliteDB(object):
             raise JcdException(
                 "Database error while setting synchronous pragma")
 
+    def execute_single(self, sql, params=None, error_message=None):
+        try:
+            req = None
+            if params is None:
+                req = self.connection.execute(sql)
+            else:
+                req = self.connection.execute(sql, params)
+            return req.rowcount
+        except sqlite3.Error as error:
+            print "%s: %s" % (type(error).__name__, error)
+            if error_message is None:
+                raise jcd.common.JcdException(
+                    "Database error while executing [%s] using [%s]" % (sql, params))
+            else:
+                raise jcd.common.JcdException(error_message)
+
+    def execute_many(self, sql, params, error_message=None):
+        try:
+            req = None
+            req = self.connection.executemany(sql, params)
+            return req.rowcount
+        except sqlite3.Error as error:
+            print "%s: %s" % (type(error).__name__, error)
+            if error_message is None:
+                raise jcd.common.JcdException(
+                    "Database error while executing [%s] using [%s]" % (sql, params))
+            else:
+                raise jcd.common.JcdException(error_message)
+
+    def execute_fetch_one(self, sql, params=None, error_message=None):
+        try:
+            req = None
+            if params is None:
+                req = self.connection.execute(sql)
+            else:
+                req = self.connection.execute(sql, params)
+            return req.fetchone()
+        except sqlite3.Error as error:
+            print "%s: %s" % (type(error).__name__, error)
+            if error_message is None:
+                raise jcd.common.JcdException(
+                    "Database error while executing [%s] using [%s]" % (sql, params))
+            else:
+                raise jcd.common.JcdException(error_message)
+
+    def execute_fetch_generator(self, sql, params=None, error_message=None):
+        try:
+            req = None
+            if params is None:
+                req = self.connection.execute(sql)
+            else:
+                req = self.connection.execute(sql, params)
+            while True:
+                items = req.fetchmany(1000)
+                if not items:
+                    break
+                for item in items:
+                    yield item
+        except sqlite3.Error as error:
+            print "%s: %s" % (type(error).__name__, error)
+            if error_message is None:
+                raise jcd.common.JcdException(
+                    "Database error while executing [%s] using [%s]" % (sql, params))
+            else:
+                raise jcd.common.JcdException(error_message)
