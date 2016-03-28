@@ -85,21 +85,18 @@ class ContractsDAO(object):
     def create_table(self):
         if jcd.app.App.Verbose:
             print "Creating table [%s]" % self.TableName
-        try:
-            self._database.connection.execute(
-                '''
-                CREATE TABLE %s (
-                    contract_id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-                    timestamp INTEGER NOT NULL,
-                    contract_name TEXT UNIQUE NOT NULL,
-                    commercial_name TEXT NOT NULL,
-                    country_code TEXT NOT NULL,
-                    cities TEXT NOT NULL)
-                ''' % self.TableName)
-        except sqlite3.Error as error:
-            print "%s: %s" % (type(error).__name__, error)
-            raise jcd.common.JcdException(
-                "Database error while creating table [%s]" % self.TableName)
+        self._database.execute_single(
+            '''
+            CREATE TABLE %s (
+                contract_id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                timestamp INTEGER NOT NULL,
+                contract_name TEXT UNIQUE NOT NULL,
+                commercial_name TEXT NOT NULL,
+                country_code TEXT NOT NULL,
+                cities TEXT NOT NULL)
+            ''' % self.TableName,
+            None,
+            "Database error while creating table [%s]" % self.TableName)
 
     def store_contracts(self, json_content, timestamp):
         # merge cities together
@@ -173,30 +170,27 @@ class FullSamplesDAO(object):
     def _create_table(self, table_name):
         if jcd.app.App.Verbose:
             print "Creating table [%s]" % table_name
-        try:
-            self._database.connection.execute(
-                '''
-                CREATE TABLE %s (
-                    timestamp INTEGER NOT NULL,
-                    contract_id INTEGER NOT NULL,
-                    station_number INTEGR NOT NULL,
-                    available_bikes INTEGER NOT NULL,
-                    available_bike_stands INTEGER NOT NULL,
-                    status INTEGER NOT NULL,
-                    bike_stands INTEGER NOT NULL,
-                    bonus INTEGER NOT NULL,
-                    banking INTEGER NOT NULL,
-                    position TEXT NOT NULL,
-                    address TEXT NOT NULL,
-                    station_name TEXT NOT NULL,
-                    last_update INTEGER,
-                    PRIMARY KEY (contract_id, station_number)
-                ) WITHOUT ROWID;
-                ''' % table_name)
-        except sqlite3.Error as error:
-            print "%s: %s" % (type(error).__name__, error)
-            raise jcd.common.JcdException(
-                "Database error while creating table [%s]" % table_name)
+        self._database.execute_single(
+            '''
+            CREATE TABLE %s (
+                timestamp INTEGER NOT NULL,
+                contract_id INTEGER NOT NULL,
+                station_number INTEGR NOT NULL,
+                available_bikes INTEGER NOT NULL,
+                available_bike_stands INTEGER NOT NULL,
+                status INTEGER NOT NULL,
+                bike_stands INTEGER NOT NULL,
+                bonus INTEGER NOT NULL,
+                banking INTEGER NOT NULL,
+                position TEXT NOT NULL,
+                address TEXT NOT NULL,
+                station_name TEXT NOT NULL,
+                last_update INTEGER,
+                PRIMARY KEY (contract_id, station_number)
+            ) WITHOUT ROWID;
+            ''' % table_name,
+            None,
+            "Database error while creating table [%s]" % table_name)
 
     def store_new_samples(self, json_content, timestamp):
         # adapt json_content to database schema
@@ -284,22 +278,19 @@ class ShortSamplesDAO(object):
 
     @staticmethod
     def _create_table(database, table_name):
-        try:
-            database.connection.execute(
-                '''
-                CREATE TABLE %s (
-                    timestamp INTEGER NOT NULL,
-                    contract_id INTEGER NOT NULL,
-                    station_number INTEGR NOT NULL,
-                    available_bikes INTEGER NOT NULL,
-                    available_bike_stands INTEGER NOT NULL,
-                    PRIMARY KEY (timestamp, contract_id, station_number)
-                ) WITHOUT ROWID;
-                ''' % table_name)
-        except sqlite3.Error as error:
-            print "%s: %s" % (type(error).__name__, error)
-            raise jcd.common.JcdException(
-                "Database error while creating table [%s]" % table_name)
+        database.execute_single(
+            '''
+            CREATE TABLE %s (
+                timestamp INTEGER NOT NULL,
+                contract_id INTEGER NOT NULL,
+                station_number INTEGR NOT NULL,
+                available_bikes INTEGER NOT NULL,
+                available_bike_stands INTEGER NOT NULL,
+                PRIMARY KEY (timestamp, contract_id, station_number)
+            ) WITHOUT ROWID;
+            ''' % table_name,
+            None,
+            "Database error while creating table [%s]" % table_name)
 
     def create_changed_table(self):
         if jcd.app.App.Verbose:
@@ -308,10 +299,12 @@ class ShortSamplesDAO(object):
 
     def find_changed_samples(self):
         try:
-            self._database.connection.execute(
+            self._database.execute_single(
                 '''
                 DELETE FROM %s
-                ''' % self.TableNameChanged)
+                ''' % self.TableNameChanged,
+                None,
+                "Database error while clearing %s table" % self.TableNameChanged)
             req = self._database.connection.execute(
                 '''
                 INSERT INTO %s
