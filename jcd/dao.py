@@ -139,20 +139,17 @@ class ContractsDAO(object):
         return num_inserted
 
     def is_refresh_needed(self):
-        try:
-            req = self._database.connection.execute(
-                '''
-                SELECT STRFTIME('%s','now') - MAX(timestamp) > value
-                FROM contracts, settings
-                WHERE name = ?
-                ''', (jcd.cmd.ConfigCmd.Parameters[1][0],))
-            result = req.fetchone()
-            # if no contract, None
-            # if latest refresh is too old, 1
-            return result[0] is None or result[0] == 1
-        except sqlite3.Error as error:
-            print "%s: %s" % (type(error).__name__, error)
-            raise jcd.common.JcdException("Database error while checking contracts refresh")
+        result = self._database.execute_fetch_one(
+            '''
+            SELECT STRFTIME('%s','now') - MAX(timestamp) > value
+            FROM contracts, settings
+            WHERE name = ?
+            ''',
+            (jcd.cmd.ConfigCmd.Parameters[1][0],),
+            "Database error while checking contracts refresh")
+        # if no contract, None
+        # if latest refresh is too old, 1
+        return result[0] is None or result[0] == 1
 
 # settings table
 class FullSamplesDAO(object):
@@ -240,32 +237,28 @@ class FullSamplesDAO(object):
         return num_inserted
 
     def age_samples(self, date):
-        try:
-            req = self._database.connection.execute(
-                '''
-                INSERT OR REPLACE INTO %s
-                SELECT * FROM %s
-                WHERE date(timestamp,'unixepoch') = ?
-                ''' % (self.TableNameOld, self.TableNameNew),
-                (date, ))
-            inserted = req.rowcount
-            req = self._database.connection.execute(
-                '''
-                DELETE FROM %s
-                WHERE date(timestamp,'unixepoch') = ?
-                ''' % self.TableNameNew,
-                (date, ))
-            deleted = req.rowcount
-            # verify coherence
-            if deleted != inserted:
-                raise jcd.common.JcdException(
-                    "Ageing operation failed (%i inserted, %i deleted)" % (
-                        inserted, deleted))
-            # return aged number of records
-            return inserted
-        except sqlite3.Error as error:
-            print "%s: %s" % (type(error).__name__, error)
-            raise jcd.common.JcdException("Database error ageing new samples into old")
+        inserted = self._database.execute_single(
+            '''
+            INSERT OR REPLACE INTO %s
+            SELECT * FROM %s
+            WHERE date(timestamp,'unixepoch') = ?
+            ''' % (self.TableNameOld, self.TableNameNew),
+            (date, ),
+            "Database error ageing new samples into old")
+        deleted = self._database.execute_single(
+            '''
+            DELETE FROM %s
+            WHERE date(timestamp,'unixepoch') = ?
+            ''' % self.TableNameNew,
+            (date, ),
+            "Database error removing aged samples from %s" % self.TableNameNew)
+        # verify coherence
+        if deleted != inserted:
+            raise jcd.common.JcdException(
+                "Ageing operation failed (%i inserted, %i deleted)" % (
+                    inserted, deleted))
+        # return aged number of records
+        return inserted
 
 # stored sample DAO
 class ShortSamplesDAO(object):
@@ -298,36 +291,34 @@ class ShortSamplesDAO(object):
         self._create_table(self._database, self.TableNameChanged)
 
     def find_changed_samples(self):
-        try:
-            self._database.execute_single(
-                '''
-                DELETE FROM %s
-                ''' % self.TableNameChanged,
-                None,
-                "Database error while clearing %s table" % self.TableNameChanged)
-            req = self._database.connection.execute(
-                '''
-                INSERT INTO %s
-                SELECT new.timestamp,
-                    new.contract_id,
-                    new.station_number,
-                    new.available_bikes,
-                    new.available_bike_stands
-                FROM %s AS new LEFT OUTER JOIN %s AS old
-                ON new.contract_id=old.contract_id AND
-                    new.station_number = old.station_number
-                WHERE new.available_bikes != old.available_bikes OR
-                    new.available_bike_stands != old.available_bike_stands OR
-                    old.station_number IS NULL
-                ORDER BY new.timestamp, new.contract_id, new.station_number
-                ''' % (self.TableNameChanged,
-                       FullSamplesDAO.TableNameNew,
-                       FullSamplesDAO.TableNameOld))
-            # return number of inserted records
-            return req.rowcount
-        except sqlite3.Error as error:
-            print "%s: %s" % (type(error).__name__, error)
-            raise jcd.common.JcdException("Database error building changed samples")
+        self._database.execute_single(
+            '''
+            DELETE FROM %s
+            ''' % self.TableNameChanged,
+            None,
+            "Database error while clearing %s table" % self.TableNameChanged)
+        inserted = self._database.execute_single(
+            '''
+            INSERT INTO %s
+            SELECT new.timestamp,
+                new.contract_id,
+                new.station_number,
+                new.available_bikes,
+                new.available_bike_stands
+            FROM %s AS new LEFT OUTER JOIN %s AS old
+            ON new.contract_id=old.contract_id AND
+                new.station_number = old.station_number
+            WHERE new.available_bikes != old.available_bikes OR
+                new.available_bike_stands != old.available_bike_stands OR
+                old.station_number IS NULL
+            ORDER BY new.timestamp, new.contract_id, new.station_number
+            ''' % (self.TableNameChanged,
+                   FullSamplesDAO.TableNameNew,
+                   FullSamplesDAO.TableNameOld),
+            None,
+            "Database error building changed samples")
+        # return number of inserted records
+        return inserted
 
     def get_changed_samples_stats(self):
         try:
@@ -361,51 +352,43 @@ class ShortSamplesDAO(object):
         return False
 
     def archive_changed_samples(self, date, target_schema):
-        try:
-            req = self._database.connection.execute(
-                '''
-                INSERT INTO %s.%s
-                SELECT * FROM %s
-                WHERE date(timestamp,'unixepoch') = ?
-                ''' % (target_schema,
-                       self.TableNameArchive,
-                       self.TableNameChanged),
-                (date, ))
-            inserted = req.rowcount
-            req = self._database.connection.execute(
-                '''
-                DELETE FROM %s
-                WHERE date(timestamp,'unixepoch') = ?
-                ''' % self.TableNameChanged,
-                (date, ))
-            deleted = req.rowcount
-            # verify coherence
-            if deleted != inserted:
-                raise jcd.common.JcdException(
-                    "Archive operation failed (%i inserted, %i deleted)" % (
-                        inserted, deleted))
-            # return number of archived records
-            return inserted
-        except sqlite3.Error as error:
-            print "%s: %s" % (type(error).__name__, error)
+        inserted = self._database.execute_single(
+            '''
+            INSERT INTO %s.%s
+            SELECT * FROM %s
+            WHERE date(timestamp,'unixepoch') = ?
+            ''' % (target_schema,
+                   self.TableNameArchive,
+                   self.TableNameChanged),
+            (date, ),
+            "Database error inserting changed samples to %s.%s" % (target_schema, self.TableNameArchive))
+        deleted = self._database.execute_single(
+            '''
+            DELETE FROM %s
+            WHERE date(timestamp,'unixepoch') = ?
+            ''' % self.TableNameChanged,
+            (date, ),
+            "Database error archiving changed samples from %s" % self.TableNameChanged)
+        # verify coherence
+        if deleted != inserted:
             raise jcd.common.JcdException(
-                "Database error achiving changed samples to %s" % target_schema)
+                "Archive operation failed (%i inserted, %i deleted)" % (
+                    inserted, deleted))
+        # return number of archived records
+        return inserted
 
     def get_changed_count(self):
         return self._database.get_count(self.TableNameChanged)
 
     def get_overall_earliest_timestamp(self, target_schema):
-        try:
-            req = self._database.connection.execute(
-                '''
-                SELECT MIN(timestamp)
-                FROM %s.%s
-                ''' % (target_schema, self.TableNameArchive))
-            result = req.fetchone()
-            return result[0]
-        except sqlite3.Error as error:
-            print "%s: %s" % (type(error).__name__, error)
-            raise jcd.common.JcdException("Database error getting earliest sample")
+        result = self._database.execute_fetch_one(
+            '''
+            SELECT MIN(timestamp)
+            FROM %s.%s
+            ''' % (target_schema, self.TableNameArchive),
+            None,
+            "Database error getting earliest sample")
+        return result[0]
 
     def insert_samples(self, samples, target_schema):
         # do not do anything if nothing is to be done
