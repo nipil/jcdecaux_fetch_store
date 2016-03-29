@@ -85,76 +85,60 @@ class SqliteDB(object):
             self.connection.execute("vacuum")
 
     def has_table(self, name, schema="main"):
-        try:
-            req = self.connection.execute(
-                '''
-                SELECT count(*), name
-                FROM %s.sqlite_master
-                WHERE type = "table" AND name = ?
-                ''' % schema, (name, ))
-            count, name = req.fetchone()
-            return count != 0
-        except sqlite3.Error as error:
-            print "%s: %s" % (type(error).__name__, error)
-            raise JcdException(
-                "Database error checking if table [%s] exists" % name)
+        result = self.execute_fetch_one(
+            '''
+            SELECT COUNT(*), name
+            FROM %s.sqlite_master
+            WHERE type = "table" AND name = ?
+            ''' % schema,
+            (name, ),
+            "Database error checking if table [%s] exists" % name)
+        return result[0] != 0
 
     def attach_database(self, file_name, schema_name, path):
         file_path = SqliteDB.get_full_path(file_name, path)
         if schema_name in self._att_databases:
             raise JcdException(
                 "Database is already attached as schema [%s]" % schema_name)
-        try:
-            self.connection.execute(
-                '''
-                ATTACH DATABASE ? AS ?
-                ''', (file_path, schema_name))
-            # memorize attachement
-            self._att_databases[schema_name] = file_name
-        except sqlite3.Error as error:
-            print "%s: %s" % (type(error).__name__, error)
-            raise JcdException(
-                "Database error while attaching [%s] as schema [%s]" % (
-                    file_name, schema_name))
+        self.execute_single(
+            '''
+            ATTACH DATABASE ? AS ?
+            ''',
+            (file_path, schema_name),
+            "Database error while attaching [%s] as schema [%s]" % (file_name, schema_name))
+        # memorize attachement
+        self._att_databases[schema_name] = file_name
 
     def detach_database(self, schema_name):
         if schema_name not in self._att_databases:
             raise JcdException(
                 "Schema [%s] is not attached" % schema_name)
-        try:
-            self.connection.execute(
-                '''
-                DETACH DATABASE ?
-                ''', (schema_name, ))
-            del self._att_databases[schema_name]
-        except sqlite3.Error as error:
-            print "%s: %s" % (type(error).__name__, error)
-            raise JcdException(
-                "Database error while detaching [%s]" % (schema_name, ))
+        self.execute_single(
+            '''
+            DETACH DATABASE ?
+            ''',
+            (schema_name, ),
+            "Database error while detaching [%s]" % schema_name)
+        del self._att_databases[schema_name]
 
     def get_count(self, target):
-        try:
-            req = self.connection.execute(
-                '''
-                SELECT COUNT(*) FROM %s
-                ''' % target)
-            return req.fetchone()[0]
-        except sqlite3.Error as error:
-            print "%s: %s" % (type(error).__name__, error)
-            raise JcdException(
-                "Database error while getting rowcount for [%s]" % (target, ))
+        result = self.execute_fetch_one(
+            '''
+            SELECT COUNT(*) FROM %s
+            ''' % target,
+            None,
+            "Database error while getting rowcount for [%s]" % target)
+        print "DEBUG", "get_count", result
+        return result[0]
 
     def set_synchronous(self, schema_name, value):
         # see https://www.sqlite.org/pragma.html#pragma_synchronous
-        try:
-            self.connection.execute(
-                '''
-                PRAGMA %s.synchronous=%i
-                ''' % (schema_name, value))
-        except sqlite3.Error as error:
-            print "%s: %s" % (type(error).__name__, error)
-            raise JcdException(
-                "Database error while setting synchronous pragma")
+        self.execute_single(
+            '''
+            PRAGMA %s.synchronous=%i
+            ''' % (schema_name, value),
+            None,
+            "Database error while setting synchronous pragma")
 
     def execute_single(self, sql, params=None, error_message=None):
         try:

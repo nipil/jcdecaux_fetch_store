@@ -321,20 +321,17 @@ class ShortSamplesDAO(object):
         return inserted
 
     def get_changed_samples_stats(self):
-        try:
-            req = self._database.connection.execute(
-                '''
-                SELECT
-                    DATE(timestamp, 'unixepoch') AS day,
-                    COUNT(timestamp) AS num_changed_samples
-                FROM %s
-                GROUP BY day
-                ORDER BY day ASC
-                ''' % self.TableNameChanged)
-            return req.fetchall()
-        except sqlite3.Error as error:
-            print "%s: %s" % (type(error).__name__, error)
-            raise jcd.common.JcdException("Database error getting changed date list")
+        return self._database.execute_fetch_generator(
+            '''
+            SELECT
+                DATE(timestamp, 'unixepoch') AS day,
+                COUNT(timestamp) AS num_changed_samples
+            FROM %s
+            GROUP BY day
+            ORDER BY day ASC
+            ''' % self.TableNameChanged,
+            None,
+            "Database error getting changed date list")
 
     @staticmethod
     def get_schema_name(date):
@@ -429,28 +426,18 @@ class Version1Dao(object):
         return self._database.has_table(self.TableName, self.SchemaName)
 
     def list_samples(self):
-        # do the query
-        try:
-            req = self._database.connection.execute(
-                '''
-                SELECT s.timestamp,
-                    date(s.timestamp,'unixepoch'),
-                    c.contract_id,
-                    s.station_number,
-                    s.bike,
-                    s.empty
-                FROM %s AS c JOIN %s.%s AS s
-                ON c.contract_name = s.contract_name
-                ''' % (ContractsDAO.TableName,
-                       self.SchemaName,
-                       self.TableName))
-            while True:
-                samples = req.fetchmany(1000)
-                if not samples:
-                    break
-                for sample in samples:
-                    yield sample
-        except sqlite3.Error as error:
-            print "%s: %s" % (type(error).__name__, error)
-            raise jcd.common.JcdException(
-                "Database error listing all samples in version 1 data")
+        return self._database.execute_fetch_generator(
+            '''
+            SELECT s.timestamp,
+                date(s.timestamp,'unixepoch'),
+                c.contract_id,
+                s.station_number,
+                s.bike,
+                s.empty
+            FROM %s AS c JOIN %s.%s AS s
+            ON c.contract_name = s.contract_name
+            ''' % (ContractsDAO.TableName,
+                   self.SchemaName,
+                   self.TableName),
+            None,
+            "Database error listing all samples in version 1 data")
