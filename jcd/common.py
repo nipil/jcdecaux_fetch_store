@@ -128,7 +128,6 @@ class SqliteDB(object):
             ''' % target,
             None,
             "Database error while getting rowcount for [%s]" % target)
-        print "DEBUG", "get_count", result
         return result[0]
 
     def set_synchronous(self, schema_name, value):
