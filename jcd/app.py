@@ -23,6 +23,7 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 
+import re
 import sys
 import json
 import argparse
@@ -199,6 +200,18 @@ class App(object):
             choices=range(0, 4),
             default=0
         )
+        # export_csv command
+        export_csv = top_command.add_parser(
+            'export_csv',
+            help='export data in csv format',
+            description='Dump and store data in csv format'
+        )
+        export_csv.add_argument(
+            'source',
+            type=self.export_param_type_check,
+            nargs=1,
+            help='contracts, stations, or daily db (use date in 2016-03-29 format)'
+        )
 
     def run(self):
         try:
@@ -221,6 +234,15 @@ class App(object):
         except jcd.common.JcdException as exception:
             print >>sys.stderr, "JcdException: %s" % exception
             sys.exit(1)
+
+    @staticmethod
+    def export_param_type_check(value):
+        if value == "contracts" or value == "stations":
+            return value
+        try:
+            return re.match("^\d{4}-\d{2}-\d{2}$", value).group(0)
+        except:
+            raise argparse.ArgumentTypeError("String '%s' does not match required format"% value)
 
     @staticmethod
     def init(args):
@@ -256,3 +278,8 @@ class App(object):
     def import_v1(args):
         import1 = jcd.cmd.Import1Cmd(args)
         import1.run()
+
+    @staticmethod
+    def export_csv(args):
+        exportcsv = jcd.cmd.ExportCsvCmd(args)
+        exportcsv.run()

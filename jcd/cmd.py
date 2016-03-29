@@ -575,3 +575,15 @@ class Import1Cmd(object):
             self._initialize()
             self._extract_deduplicate_data()
             self._import_all_csv_data()
+
+# import data from version 1
+class ExportCsvCmd(object):
+
+    def __init__(self, args):
+        self._app_db = None
+        self._args = args
+
+    def run(self):
+        with jcd.common.SqliteDB(jcd.app.App.DbName, jcd.app.App.DataPath) as app_db:
+            self._app_db = app_db
+            print self._args
