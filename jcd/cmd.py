@@ -396,7 +396,7 @@ class Import1Cmd(object):
         if created:
             print "Database", db_filename, "created"
         # WARNING: attaching commits current transaction
-        self._app_db.attach_database(db_filename, self._daily_schema_name)
+        self._app_db.attach_database(db_filename, self._daily_schema_name, jcd.app.App.DataPath)
         # modify synchronization for version 1 db
         self._app_db.set_synchronous(self._daily_schema_name, self._args.sync)
 
