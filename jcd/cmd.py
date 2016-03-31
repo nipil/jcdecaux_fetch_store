@@ -27,6 +27,7 @@ import csv
 import sys
 import time
 import errno
+import codecs
 import shutil
 import random
 import os.path
@@ -583,7 +584,19 @@ class ExportCsvCmd(object):
         self._app_db = None
         self._args = args
 
+    @staticmethod
+    def _export_csv(items):
+        writer = csv.writer(sys.stdout, quoting=csv.QUOTE_ALL)
+        for item in items:
+            writer.writerow([unicode(field).encode("utf-8") for field in item])
+
+    def export_contracts(self):
+        dao = jcd.dao.ContractsDAO(self._app_db)
+        contracts = dao.list()
+        self._export_csv(contracts)
+
     def run(self):
         with jcd.common.SqliteDB(jcd.app.App.DbName, jcd.app.App.DataPath) as app_db:
             self._app_db = app_db
-            print self._args
+            if self._args.source == 'contracts':
+                self.export_contracts()

@@ -151,6 +151,22 @@ class ContractsDAO(object):
         # if latest refresh is too old, 1
         return result[0] is None or result[0] == 1
 
+    def list(self):
+        return self._database.execute_fetch_generator(
+            '''
+            SELECT
+                contract_id,
+                timestamp,
+                contract_name,
+                commercial_name,
+                country_code,
+                cities
+            FROM %s
+            ORDER BY contract_name
+            ''' % self.TableName,
+            None,
+            "Database error listing contracts")
+
 # settings table
 class FullSamplesDAO(object):
 
