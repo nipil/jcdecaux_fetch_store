@@ -276,6 +276,27 @@ class FullSamplesDAO(object):
         # return aged number of records
         return inserted
 
+    def list(self):
+        return self._database.execute_fetch_generator(
+            '''
+            SELECT
+                timestamp,
+                contract_id,
+                station_number,
+                status,
+                bike_stands,
+                bonus,
+                banking,
+                position,
+                address,
+                station_name,
+                last_update
+            FROM %s
+            ORDER BY contract_id, station_number
+            ''' % self.TableNameOld,
+            None,
+            "Database error listing stations")
+
 # stored sample DAO
 class ShortSamplesDAO(object):
 

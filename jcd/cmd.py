@@ -595,8 +595,15 @@ class ExportCsvCmd(object):
         contracts = dao.list()
         self._export_csv(contracts)
 
+    def export_stations(self):
+        dao = jcd.dao.FullSamplesDAO(self._app_db)
+        stations = dao.list()
+        self._export_csv(stations)
+
     def run(self):
         with jcd.common.SqliteDB(jcd.app.App.DbName, jcd.app.App.DataPath) as app_db:
             self._app_db = app_db
             if self._args.source == 'contracts':
                 self.export_contracts()
+            if self._args.source == 'stations':
+                self.export_stations()
