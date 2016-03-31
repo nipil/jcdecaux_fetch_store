@@ -209,8 +209,7 @@ class App(object):
         export_csv.add_argument(
             'source',
             type=self.export_param_type_check,
-            nargs=1,
-            help='contracts, stations, or daily db (use date in 2016-03-29 format)'
+            help="'contracts', 'stations', or date (YYYY-MM-DD)"
         )
 
     def run(self):
