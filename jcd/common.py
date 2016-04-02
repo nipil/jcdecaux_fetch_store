@@ -53,6 +53,7 @@ class SqliteDB(object):
         if self._connection is None:
             try:
                 self._connection = sqlite3.connect(self._full_path)
+                self._connection.row_factory = sqlite3.Row
             except sqlite3.Error as error:
                 print "%s: %s" % (type(error).__name__, error)
                 raise JcdException(
@@ -186,7 +187,7 @@ class SqliteDB(object):
             else:
                 raise jcd.common.JcdException(error_message)
 
-    def execute_fetch_generator(self, sql, params=None, error_message=None):
+    def execute_fetch_generator(self, sql, params=None, error_message=None, as_dict=False):
         try:
             req = None
             if params is None:
@@ -198,7 +199,10 @@ class SqliteDB(object):
                 if not items:
                     break
                 for item in items:
-                    yield item
+                    if as_dict:
+                        yield dict(zip(item.keys(), item))
+                    else:
+                        yield item
         except sqlite3.Error as error:
             print "%s: %s" % (type(error).__name__, error)
             if error_message is None:
