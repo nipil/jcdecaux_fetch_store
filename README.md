@@ -156,6 +156,33 @@ Sample output when using `--verbose`:
 	Station name is [00009-GUEPIN]
 	API TEST SUCCESS
 
+## export_csv
+
+See `export_csv --help` for export_csv parameter list.
+
+Export contracts by using `export_csv contracts`. Sample output :
+
+	"11","1459598403","Amiens","Velam","FR","Amiens"
+	"27","1459598403","Besancon","VéloCité","FR","Besançon"
+	"20","1459598403","Bruxelles-Capitale","villo","BE","Anderlecht/Berchem-Sainte-Agathe/Bruxelles/Etterbeek/Forest/Ganshoren/Ixelles/Jette/Koekelberg/Molenbeek-Saint-Jean/Saint-Gilles/Saint-Josse-ten-noode/Schaerbeek/Uccle/Woluwe-Saint-Lambert/Woluwe-Saint-Pierre"
+	"21","1459598403","Cergy-Pontoise","Velo2","FR","Cergy/Courdimanche/Eragny-sur-Oise/Neuville-sur-Oise/Pontoise/Saint-Ouen-L'Aumone/Vauréal"
+
+Export stations by using `export_csv stations`. Sample output :
+
+	"1459598703","1","1","1","25","0","1","49.4395241491/1.08880494987","DEVANT N°7 BIS RUE JEANNE D'ARC","01 - THEATRE DES ARTS","1459598111000"
+	"1459598703","1","2","1","20","0","1","49.4442849737/1.07838302561","AVENUE PASTEUR","02- PASTEUR - FAC DE DROIT","1459598074000"
+	"1459598703","1","3","1","24","0","1","49.4434006164/1.08923406532","PLACE DU VIEUX MARCHE","03- VIEUX MARCHE","1459598266000"
+	"1459598703","1","4","1","20","0","1","49.4443079768/1.09357958613","DEVANT N° 39 ALLEE EUGENE DELACROIX","04- MUSEE DES BEAUX ARTS","1459598219000"
+
+Export daily database by date, using `export_csv YYYY-MM-DD`. Sample output :
+
+	"1459598403","1","1","11","14"
+	"1459598403","1","2","10","10"
+	"1459598403","1","3","10","14"
+	"1459598403","1","4","8","12"
+
+Refer to the database schemas for column significance.
+
 ## import_v1
 
 See `import_v1 --help` for import_v1 parameter list.
