@@ -463,7 +463,7 @@ class ShortSamplesDAO(object):
             ORDER BY timestamp, contract_id, station_number
             ''' % (schema_name, ShortSamplesDAO.TableNameArchive),
             None,
-            "Database error listing contracts")
+            "Database error listing archived samples")
 
 # stored sample DAO
 class Version1Dao(object):
