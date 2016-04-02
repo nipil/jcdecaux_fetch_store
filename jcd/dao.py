@@ -450,6 +450,21 @@ class ShortSamplesDAO(object):
         # return number of inserted records
         return num_inserted
 
+    def list_archived(self, schema_name):
+        return self._database.execute_fetch_generator(
+            '''
+            SELECT
+                timestamp,
+                contract_id,
+                station_number,
+                available_bikes,
+                available_bike_stands
+            FROM %s.%s
+            ORDER BY timestamp, contract_id, station_number
+            ''' % (schema_name, ShortSamplesDAO.TableNameArchive),
+            None,
+            "Database error listing contracts")
+
 # stored sample DAO
 class Version1Dao(object):
 

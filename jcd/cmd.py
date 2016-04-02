@@ -600,10 +600,25 @@ class ExportCsvCmd(object):
         stations = dao.list()
         self._export_csv(stations)
 
+    def export_date(self):
+        # build target db information
+        short_dao = jcd.dao.ShortSamplesDAO(self._app_db)
+        schema_name = short_dao.get_schema_name(self._args.source)
+        db_filename = short_dao.get_db_file_name(schema_name)
+        # open if it exists, and verify that table exists
+        self._app_db.attach_database(db_filename, schema_name, jcd.app.App.DataPath, True)
+        if not self._app_db.has_table(jcd.dao.ShortSamplesDAO.TableNameArchive, schema_name):
+            raise jcd.common.JcdException("No table for archived samples in [%s] database" % db_filename)
+        # dump the content
+        samples = short_dao.list_archived(schema_name)
+        self._export_csv(samples)
+
     def run(self):
         with jcd.common.SqliteDB(jcd.app.App.DbName, jcd.app.App.DataPath) as app_db:
             self._app_db = app_db
             if self._args.source == 'contracts':
                 self.export_contracts()
-            if self._args.source == 'stations':
+            elif self._args.source == 'stations':
                 self.export_stations()
+            else:
+                self.export_date()
