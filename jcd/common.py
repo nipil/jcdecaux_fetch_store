@@ -95,8 +95,10 @@ class SqliteDB(object):
             "Database error checking if table [%s] exists" % name)
         return result[0] != 0
 
-    def attach_database(self, file_name, schema_name, path):
+    def attach_database(self, file_name, schema_name, path, must_exist=False):
         file_path = SqliteDB.get_full_path(file_name, path)
+        if must_exist and not os.path.exists(file_path):
+            raise JcdException("Database [%s] does not exist" % file_name)
         if schema_name in self._att_databases:
             raise JcdException(
                 "Database is already attached as schema [%s]" % schema_name)
