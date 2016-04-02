@@ -41,7 +41,7 @@ class SqliteDB(object):
         self._data_path = data_path
         self._file_name = db_filename
         self._full_path = SqliteDB.get_full_path(self._file_name, self._data_path)
-        self.connection = None
+        self._connection = None
         self._att_databases = {}
 
     @staticmethod
@@ -50,9 +50,9 @@ class SqliteDB(object):
             "%s/%s" % (path, filename)))
 
     def open(self):
-        if self.connection is None:
+        if self._connection is None:
             try:
-                self.connection = sqlite3.connect(self._full_path)
+                self._connection = sqlite3.connect(self._full_path)
             except sqlite3.Error as error:
                 print "%s: %s" % (type(error).__name__, error)
                 raise JcdException(
@@ -60,13 +60,13 @@ class SqliteDB(object):
 
     def close(self):
         # close main databases
-        if self.connection is not None:
-            self.connection.close()
-        self.connection = None
+        if self._connection is not None:
+            self._connection.close()
+        self._connection = None
 
     def commit(self):
-        if self.connection is not None:
-            self.connection.commit()
+        if self._connection is not None:
+            self._connection.commit()
 
     def __enter__(self):
         # open the connection if it's not already open
@@ -81,8 +81,8 @@ class SqliteDB(object):
         return False
 
     def vacuum(self):
-        if self.connection is not None:
-            self.connection.execute("vacuum")
+        if self._connection is not None:
+            self._connection.execute("vacuum")
 
     def has_table(self, name, schema="main"):
         result = self.execute_fetch_one(
@@ -145,9 +145,9 @@ class SqliteDB(object):
         try:
             req = None
             if params is None:
-                req = self.connection.execute(sql)
+                req = self._connection.execute(sql)
             else:
-                req = self.connection.execute(sql, params)
+                req = self._connection.execute(sql, params)
             return req.rowcount
         except sqlite3.Error as error:
             print "%s: %s" % (type(error).__name__, error)
@@ -160,7 +160,7 @@ class SqliteDB(object):
     def execute_many(self, sql, params, error_message=None):
         try:
             req = None
-            req = self.connection.executemany(sql, params)
+            req = self._connection.executemany(sql, params)
             return req.rowcount
         except sqlite3.Error as error:
             print "%s: %s" % (type(error).__name__, error)
@@ -174,9 +174,9 @@ class SqliteDB(object):
         try:
             req = None
             if params is None:
-                req = self.connection.execute(sql)
+                req = self._connection.execute(sql)
             else:
-                req = self.connection.execute(sql, params)
+                req = self._connection.execute(sql, params)
             return req.fetchone()
         except sqlite3.Error as error:
             print "%s: %s" % (type(error).__name__, error)
@@ -190,9 +190,9 @@ class SqliteDB(object):
         try:
             req = None
             if params is None:
-                req = self.connection.execute(sql)
+                req = self._connection.execute(sql)
             else:
-                req = self.connection.execute(sql, params)
+                req = self._connection.execute(sql, params)
             while True:
                 items = req.fetchmany(1000)
                 if not items:
