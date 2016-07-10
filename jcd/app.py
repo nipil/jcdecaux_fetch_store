@@ -38,7 +38,7 @@ class ApiAccess(object):
     BaseUrl = "https://api.jcdecaux.com/vls/v1"
 
     def __init__(self, apikey):
-        self._apikey = apikey
+        self._apikey = apikey[0]
 
     @staticmethod
     def _parse_reply(reply_text):
