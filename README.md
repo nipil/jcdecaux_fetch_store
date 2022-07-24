@@ -1,3 +1,7 @@
+# OBSOLETE
+
+This repository has been archived and will not be updated anymore.
+
 # What is this ?
 
 This is a python package which uses [JCDecaux API](https://developer.jcdecaux.com/) to get information from [their bike sharing service](http://www.cyclocity.com), and store station data changes (available bikes and empty stands) efficiently in a series of SQLite daily database.
